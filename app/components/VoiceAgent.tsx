@@ -22,14 +22,17 @@ import {
   createNewAssistant,
 } from "@/app/actions/backboard";
 import type { BackboardAssistant } from "@/app/lib/backboard";
-import { useFlowToolCalling } from "@/app/hooks/useFlowToolCalling";
+import {
+  useFlowToolCalling,
+  type ToolCallingCallbacks,
+  type ToolCallingContext,
+} from "@/app/hooks/useFlowToolCalling";
 import {
   useConversationMirror,
   type MirrorCallbacks,
 } from "@/app/hooks/useConversationMirror";
 import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
 import { useAdminDebug } from "@/app/contexts/AdminDebugContext";
-import type { ToolCallingCallbacks } from "@/app/hooks/useFlowToolCalling";
 
 const AGENT_ID = "1d9e7010-5c07-40d4-8088-42a5a0bc5645:latest";
 
@@ -41,8 +44,6 @@ function float32ToInt16(float32: Float32Array): Int16Array {
   }
   return int16;
 }
-
-let recallIdCounter = 0;
 
 export function VoiceAgent() {
   const [isActive, setIsActive] = useState(false);
@@ -56,6 +57,7 @@ export function VoiceAgent() {
   >([]);
   const [userPartialText, setUserPartialText] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [sessionThreadId, setSessionThreadId] = useState<string | null>(null);
 
   const { startConversation, endConversation, sendAudio, socketState } =
     useFlow();
@@ -70,7 +72,6 @@ export function VoiceAgent() {
     updateMirrorEntry,
     addToolCall,
     updateToolCall,
-    addRecallResult,
     setAllMemories,
     resetSession,
   } = useAdminDebug();
@@ -80,6 +81,7 @@ export function VoiceAgent() {
     () => ({
       onThreadCreated: (threadId) => {
         setSession({ threadId });
+        setSessionThreadId(threadId);
       },
       onMirrorStart: (id, userText, agentText) => {
         addMirrorEntry({
@@ -109,20 +111,21 @@ export function VoiceAgent() {
       onToolCallEnd: (id, update) => {
         updateToolCall(id, update);
       },
-      onRecallResult: (query, memories) => {
-        addRecallResult({
-          id: `recall-${++recallIdCounter}`,
-          query,
-          memories,
-          timestamp: Date.now(),
-        });
-      },
     }),
-    [addToolCall, updateToolCall, addRecallResult],
+    [addToolCall, updateToolCall],
+  );
+
+  // Session context for brain API calls
+  const sessionContext: ToolCallingContext = useMemo(
+    () => ({
+      threadId: sessionThreadId,
+      assistantId: selectedAssistantId || undefined,
+    }),
+    [sessionThreadId, selectedAssistantId],
   );
 
   const { activeToolCall, handleToolInvoke } =
-    useFlowToolCalling(toolCallbacks);
+    useFlowToolCalling(toolCallbacks, sessionContext);
 
   // Mirror conversation turns to Backboard for memory extraction
   useConversationMirror(messages, isActive, mirrorCallbacks);
@@ -260,6 +263,7 @@ export function VoiceAgent() {
       setError("");
       setMessages([]);
       setUserPartialText("");
+      setSessionThreadId(null);
       resetSession();
 
       // Ensure the selected assistant is active on the server
@@ -405,13 +409,13 @@ export function VoiceAgent() {
           }`}
         >
           {activeToolCall.state === "executing" && (
-            <span>Checking my memory...</span>
+            <span>Thinking...</span>
           )}
           {activeToolCall.state === "completed" && (
             <span>Got it!</span>
           )}
           {activeToolCall.state === "failed" && (
-            <span>Could not access memories right now.</span>
+            <span>Something went wrong. Let me try again.</span>
           )}
         </div>
       )}

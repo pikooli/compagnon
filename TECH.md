@@ -17,15 +17,25 @@
 - `app/lib/flow-tools.ts` — tool type definitions, tool registry (`TOOLS`), and executor (`executeToolCall`)
 - `app/hooks/useFlowToolCalling.ts` — custom hook that patches `WebSocket.send` to inject `tools` into `StartConversation`, handles `ToolInvoke` messages, and sends `ToolResult` back
 - SDK v0.2.2 has no native tool calling support; we access private `FlowClient` internals via `as any` casts
-- `recall_memories` tool calls `recallMemoriesStructured` server action via dynamic import (returns both text for Flow + structured memory data for admin panel)
+- `ask_brain` catch-all tool calls the brain API route via `fetch("/api/brain")`; passes session context (threadId, assistantId)
+
+## Brain (LangGraph + Cerebras)
+- `@langchain/langgraph` — agent orchestration (createReactAgent)
+- `@langchain/cerebras` — ChatCerebras LLM binding for Cerebras Cloud
+- `@langchain/core` — base types (messages, tools)
+- `zod` — tool schema definitions
+- **Model**: Cerebras `gpt-oss-120b` (MoE, ~3,000 tokens/sec, OpenAI-compatible API)
+- `app/lib/brain/agent.ts` — LangGraph ReAct agent, singleton LLM, `invokeBrain()` function
+- `app/lib/brain/tools.ts` — brain tools (recall_memories via Backboard API); tools are created per-request to close over session context
+- `app/lib/brain/index.ts` — re-exports
+- `app/api/brain/route.ts` — POST endpoint: accepts `{ message, threadId?, assistantId? }`, invokes brain agent, returns `{ response }`
+- Agent is re-created per request (lightweight graph compilation); LLM instance is cached
 
 ## Memory (Backboard.io)
 - `app/lib/backboard.ts` — `BackboardClient` class wrapping REST API (`https://app.backboard.io/api`), pure fetch, no external deps
 - `app/actions/backboard.ts` — server actions with module-level caching for client + assistant_id + thread_id
   - `createBackboardThread()` — creates thread, stores thread_id server-side, returns it to client
   - `mirrorTurnToBackboard()` — sends user + agent text with `memory=Auto` (Backboard extracts memories)
-  - `recallMemories(query)` — sends query with `memory=Readonly`, Backboard returns matched memories
-  - `recallMemoriesStructured(query)` — same as above but returns `{text, memories[]}` for admin panel
   - `getBackboardSessionInfo()` — returns `{assistantId, threadId}` for admin panel
   - `fetchAllMemories()` — returns all stored `BackboardMemory[]` for admin panel
   - `listAssistants()` — lists all assistants for the current API key
@@ -35,10 +45,11 @@
 - Assistant ID auto-created on first run, persisted to `.backboard-assistant-id` file (gitignored)
 - Auth: Backboard uses `X-API-Key` header with `BACKBOARD_API_KEY` env var
 
-## Architecture — Flow vs Backboard
-- **Flow = minimal voice brain**: STT + TTS + lightweight LLM for conversational flow. Does not carry heavy logic or long-term state.
-- **Backboard = memory backend**: persistent memory extraction (via mirroring), storage, and intelligent recall. Receives full conversation via mirroring. Recall uses Backboard's native vector search + LLM filtering (Cerebras runs behind Backboard — we don't call it directly).
-- Flow delegates to Backboard via tools (`recall_memories`) when it needs context beyond the current conversation.
+## Architecture — Flow → Brain → Backboard
+- **Flow = minimal voice brain**: STT + TTS + lightweight LLM for conversational flow. Has a single `ask_brain` catch-all tool.
+- **Brain = centralized reasoning**: LangGraph ReAct agent with Cerebras. Receives queries from Flow, uses its own tools to answer. Currently has `recall_memories` tool.
+- **Backboard = memory storage**: persistent memory extraction via mirroring (`memory=Auto`). Brain queries Backboard for recall (`memory=Readonly` or `GET /memories` fallback).
+- Flow → `ask_brain` tool → `POST /api/brain` → LangGraph agent → tools (recall_memories → Backboard API) → response back to Flow
 
 ## Architecture
 - JWT generated server-side via Next.js server action (`app/actions/auth.ts`)

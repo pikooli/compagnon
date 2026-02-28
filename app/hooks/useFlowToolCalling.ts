@@ -4,11 +4,11 @@ import { useContext, useCallback, useEffect, useRef, useState } from "react";
 import { FlowContext } from "@speechmatics/flow-client-react";
 import {
   TOOLS,
+  executeToolCall,
   type ToolInvokeMessage,
   type ToolResultMessage,
 } from "@/app/lib/flow-tools";
 import type { ToolCallEntry } from "@/app/types/admin-debug";
-import type { RetrievedMemory } from "@/app/lib/backboard";
 
 export type ToolCallStatus = {
   id: string;
@@ -20,16 +20,29 @@ export type ToolCallStatus = {
 export interface ToolCallingCallbacks {
   onToolCallStart?: (entry: ToolCallEntry) => void;
   onToolCallEnd?: (id: string, update: Partial<ToolCallEntry>) => void;
-  onRecallResult?: (query: string, memories: RetrievedMemory[]) => void;
 }
 
-export function useFlowToolCalling(callbacks?: ToolCallingCallbacks) {
+export interface ToolCallingContext {
+  threadId?: string | null;
+  assistantId?: string | null;
+}
+
+export function useFlowToolCalling(
+  callbacks?: ToolCallingCallbacks,
+  sessionContext?: ToolCallingContext,
+) {
   const context = useContext(FlowContext);
   const [activeToolCall, setActiveToolCall] = useState<ToolCallStatus | null>(
     null,
   );
   const [toolCallHistory, setToolCallHistory] = useState<ToolCallEntry[]>([]);
   const patchedWsRef = useRef<WebSocket | null>(null);
+
+  // Keep session context in a ref so the handler always sees the latest value
+  const sessionContextRef = useRef(sessionContext);
+  useEffect(() => {
+    sessionContextRef.current = sessionContext;
+  }, [sessionContext]);
 
   // Patch WebSocket.send to inject `tools` into the StartConversation message.
   // The SDK's `startConversation` doesn't support a `tools` param, so we
@@ -94,24 +107,11 @@ export function useFlowToolCalling(callbacks?: ToolCallingCallbacks) {
 
       let toolResult: ToolResultMessage;
       try {
-        // Use structured recall for recall_memories to get both text and memory data
-        let result: string;
-        if (fn.name === "recall_memories") {
-          const { recallMemoriesStructured } = await import(
-            "@/app/actions/backboard"
-          );
-          const structured = await recallMemoriesStructured(
-            (fn.arguments.query as string) ?? "",
-          );
-          result = structured.text;
-          callbacks?.onRecallResult?.(
-            (fn.arguments.query as string) ?? "",
-            structured.memories,
-          );
-        } else {
-          const { executeToolCall } = await import("@/app/lib/flow-tools");
-          result = await executeToolCall(fn.name, fn.arguments);
-        }
+        const result = await executeToolCall(
+          fn.name,
+          fn.arguments,
+          sessionContextRef.current ?? undefined,
+        );
 
         toolResult = {
           message: "ToolResult",

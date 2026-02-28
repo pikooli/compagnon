@@ -5,25 +5,39 @@
 - Next.js 16 (App Router, latest as of 2026-02-28)
 - UI: shadcn/ui
 - Voice: Speechmatics Flow (`@speechmatics/flow-client-react` + companion packages)
-- Memory: Backboard.io (persistent memory + recall; Cerebras LLM runs behind Backboard)
+- Brain: LangGraph ReAct agent + Cerebras `gpt-oss-120b` (centralized reasoning)
+- Memory: Backboard.io (persistent memory storage + mirroring)
 - Target audience: elderly people — prioritize large text, simple navigation, high contrast, minimal cognitive load
 
 # Architecture Philosophy
-- **Flow = minimal voice brain** — handles STT, TTS, and lightweight conversational LLM. It should not carry heavy logic.
-- **Backboard = secondary backend** — handles memory storage, recall intelligence, and any heavy LLM reasoning. It receives the full conversation via mirroring.
-- Flow delegates to Backboard via tools whenever it needs context beyond the current conversation.
+- **Flow = minimal voice brain** — handles STT, TTS, and lightweight conversational LLM. Has a single `ask_brain` catch-all tool.
+- **Brain = centralized reasoning** — LangGraph ReAct agent powered by Cerebras `gpt-oss-120b`. Receives queries from Flow, uses its own tools (recall_memories, etc.) to answer.
+- **Backboard = memory storage** — receives full conversation via mirroring (`memory=Auto`), extracts and stores memories. Brain queries Backboard for recall.
+- Flow delegates to the brain via the `ask_brain` tool whenever deeper thinking, recall, or external lookups are needed.
+
+# Brain (LangGraph + Cerebras)
+- `app/lib/brain/agent.ts` — LangGraph ReAct agent, singleton ChatCerebras LLM, `invokeBrain(message, context)` function
+- `app/lib/brain/tools.ts` — brain tools factory `createBrainTools(ctx)`; tools close over session context (threadId, assistantId)
+- `app/lib/brain/index.ts` — re-exports
+- `app/api/brain/route.ts` — POST endpoint: `{ message, threadId?, assistantId? }` → `{ response }`
+- Model: Cerebras `gpt-oss-120b` (MoE, ~3,000 tokens/sec)
+- Agent re-created per request (graph compilation is lightweight); LLM instance cached
+- Brain tools: `recall_memories` (queries Backboard API for stored memories)
+- New tools should be added to `app/lib/brain/tools.ts` in the `createBrainTools` function
+- Env vars: `CEREBRAS_API_KEY` (required)
 
 # Tool Calling
 - `app/hooks/useFlowToolCalling.ts` patches WebSocket to work around SDK v0.2.2 lacking tool support
 - When SDK is updated with native tool calling, refactor to remove the WS patching
-- `recall_memories` tool in `app/lib/flow-tools.ts` — calls Backboard to retrieve stored memories
+- `ask_brain` tool in `app/lib/flow-tools.ts` — catch-all that calls `POST /api/brain`
+- `executeToolCall()` passes session context (threadId, assistantId) to the brain API
 
 # Memory (Backboard.io)
 - `app/lib/backboard.ts` — REST wrapper for Backboard API (no external SDK, pure fetch)
-- `app/actions/backboard.ts` — server actions: createBackboardThread, mirrorTurnToBackboard, recallMemories, recallMemoriesStructured, getBackboardSessionInfo, fetchAllMemories, listAssistants, setActiveAssistant, createNewAssistant
+- `app/actions/backboard.ts` — server actions: createBackboardThread, mirrorTurnToBackboard, getBackboardSessionInfo, fetchAllMemories, listAssistants, setActiveAssistant, createNewAssistant
 - `app/hooks/useConversationMirror.ts` — auto-mirrors conversation turns to Backboard (fire-and-forget); accepts `MirrorCallbacks` for admin panel status reporting
 - **Mirroring** (`memory=Auto`): every turn sent to Backboard in background; Backboard extracts + stores memories
-- **Recall** (`memory=Readonly`): sends query to Backboard, which performs vector search + LLM filtering internally (Cerebras runs behind Backboard — we never call Cerebras directly). Fallback: if no active thread, dumps all memories via `GET /memories`.
+- **Recall** (via brain): brain's `recall_memories` tool queries Backboard with `memory=Readonly` or fallback `GET /memories`
 - Memories persist at the assistant level; new thread created per voice session
 - Backboard failures never break the voice conversation — all errors are caught and logged
 - Env vars: `BACKBOARD_API_KEY` (required)

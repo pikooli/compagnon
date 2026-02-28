@@ -44,19 +44,19 @@ export const TOOLS: FlowToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "recall_memories",
+      name: "ask_brain",
       description:
-        "Retrieves stored memories about the user from previous conversations. Call this when the user asks if you remember something, references past conversations, or when you need personal context (family members, preferences, routines, past events) to give a better answer. Pass the user's question or topic as the query so the memory system can find the most relevant memories.",
+        "Routes any question that needs deeper thinking, memory recall, calculations, or external lookups to the brain. Use this whenever the user asks something you can't answer from the current conversation alone — for example, recalling past conversations, personal details, family members, preferences, or routines.",
       parameters: {
         type: "object",
         properties: {
-          query: {
+          message: {
             type: "string",
             description:
-              "The user's question or topic to recall memories about, e.g. 'my grandson' or 'what I like to eat'",
+              "The full question or context to send to the brain for processing",
           },
         },
-        required: ["query"],
+        required: ["message"],
       },
     },
   },
@@ -64,16 +64,36 @@ export const TOOLS: FlowToolDefinition[] = [
 
 // --- Tool executor ---
 
+/**
+ * Executes a tool call by calling the brain API route.
+ * Takes optional session context to pass along to the brain.
+ */
 export async function executeToolCall(
   name: string,
   args: Record<string, unknown>,
+  context?: { threadId?: string | null; assistantId?: string | null },
 ): Promise<string> {
-  // Dynamic import to keep server action out of the client bundle
-  const { recallMemories } = await import("@/app/actions/backboard");
-
   switch (name) {
-    case "recall_memories":
-      return recallMemories((args.query as string) ?? "");
+    case "ask_brain": {
+      const message = (args.message as string) ?? "";
+      const res = await fetch("/api/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          threadId: context?.threadId,
+          assistantId: context?.assistantId,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.text();
+        throw new Error(`Brain API error (${res.status}): ${errorBody}`);
+      }
+
+      const data = await res.json();
+      return data.response ?? "No response from brain.";
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

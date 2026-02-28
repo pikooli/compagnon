@@ -2,7 +2,7 @@
 
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
-import { BackboardClient, type BackboardAssistant, type BackboardMemory, type RetrievedMemory } from "@/app/lib/backboard";
+import { BackboardClient, type BackboardAssistant, type BackboardMemory } from "@/app/lib/backboard";
 
 const ASSISTANT_ID_FILE = join(process.cwd(), ".backboard-assistant-id");
 
@@ -169,121 +169,5 @@ export async function createNewAssistant(
   } catch (err) {
     console.error("[Backboard] Failed to create assistant:", err);
     return null;
-  }
-}
-
-/**
- * Recalls memories via Backboard's native memory=Readonly mode.
- * Returns structured data: `text` for Flow, `memories` array for admin panel.
- *
- * Primary: sends query as a Readonly message on the current thread.
- * Backboard searches stored memories and returns `retrieved_memories`.
- * Fallback: if no active thread, dumps all memories via GET /memories.
- */
-export async function recallMemoriesStructured(
-  query: string,
-): Promise<{ text: string; memories: RetrievedMemory[] }> {
-  try {
-    const client = getClient();
-
-    if (currentThreadId) {
-      const response = await client.sendMessage(
-        currentThreadId,
-        query || "What do you remember about this user?",
-        { memory: "Readonly" },
-      );
-
-      const memories = response.retrieved_memories;
-      console.log(
-        `[Backboard] Recalled ${memories?.length ?? 0} memories for: "${query}"`,
-      );
-
-      if (memories && memories.length > 0) {
-        const unique = [...new Map(memories.map((m) => [m.memory, m])).values()];
-        const formatted = unique.map((m) => `- ${m.memory}`).join("\n");
-        return {
-          text: `Here is what I remember about the user:\n${formatted}`,
-          memories: unique,
-        };
-      }
-
-      return {
-        text: "No memories stored yet. This is a new user — I don't have any prior information about them.",
-        memories: [],
-      };
-    }
-
-    // Fallback: no thread, dump all memories via GET
-    console.warn("[Backboard] No active thread — falling back to GET /memories");
-    const assistantId = await getAssistantId();
-    const allMemories = await client.listMemories(assistantId);
-
-    if (allMemories.length === 0) {
-      return {
-        text: "No memories stored yet. This is a new user — I don't have any prior information about them.",
-        memories: [],
-      };
-    }
-
-    const formatted = allMemories.map((m) => `- ${m.content}`).join("\n");
-    return {
-      text: `Here is what I remember about the user:\n${formatted}`,
-      memories: allMemories.map((m) => ({ id: m.id, memory: m.content, score: 0 })),
-    };
-  } catch (err) {
-    console.error("[Backboard] Failed to recall memories:", err);
-    return {
-      text: "I wasn't able to access memories right now. Please continue the conversation normally.",
-      memories: [],
-    };
-  }
-}
-
-/**
- * Recalls relevant memories using Backboard's native memory=Readonly mode.
- * Backboard handles vector search and LLM filtering internally (using Cerebras behind the scenes).
- *
- * Primary: sends the query as a Readonly message on the current thread.
- * Fallback: if no active thread, dumps all memories via GET /memories.
- */
-export async function recallMemories(query: string): Promise<string> {
-  try {
-    const client = getClient();
-
-    if (currentThreadId) {
-      const response = await client.sendMessage(
-        currentThreadId,
-        query || "What do you remember about this user?",
-        { memory: "Readonly" },
-      );
-
-      const memories = response.retrieved_memories;
-      console.log(
-        `[Backboard] Recalled ${memories?.length ?? 0} memories for: "${query}"`,
-      );
-
-      if (memories && memories.length > 0) {
-        const unique = [...new Map(memories.map((m) => [m.memory, m])).values()];
-        const formatted = unique.map((m) => `- ${m.memory}`).join("\n");
-        return `Here is what I remember about the user:\n${formatted}`;
-      }
-
-      return "No memories stored yet. This is a new user — I don't have any prior information about them.";
-    }
-
-    // Fallback: no thread, dump all memories via GET
-    console.warn("[Backboard] No active thread — falling back to GET /memories");
-    const assistantId = await getAssistantId();
-    const allMemories = await client.listMemories(assistantId);
-
-    if (allMemories.length === 0) {
-      return "No memories stored yet. This is a new user — I don't have any prior information about them.";
-    }
-
-    const formatted = allMemories.map((m) => `- ${m.content}`).join("\n");
-    return `Here is what I remember about the user:\n${formatted}`;
-  } catch (err) {
-    console.error("[Backboard] Failed to recall memories:", err);
-    return "I wasn't able to access memories right now. Please continue the conversation normally.";
   }
 }
