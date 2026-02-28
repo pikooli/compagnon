@@ -14,7 +14,14 @@ import {
 } from "@speechmatics/browser-audio-input-react";
 import { usePCMAudioPlayerContext } from "@speechmatics/web-pcm-player-react";
 import { getJWT } from "@/app/actions/auth";
-import { getBackboardSessionInfo } from "@/app/actions/backboard";
+import {
+  getBackboardSessionInfo,
+  listAssistants,
+  setActiveAssistant,
+  fetchAllMemories,
+  createNewAssistant,
+} from "@/app/actions/backboard";
+import type { BackboardAssistant } from "@/app/lib/backboard";
 import { useFlowToolCalling } from "@/app/hooks/useFlowToolCalling";
 import {
   useConversationMirror,
@@ -40,6 +47,10 @@ let recallIdCounter = 0;
 export function VoiceAgent() {
   const [isActive, setIsActive] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [assistants, setAssistants] = useState<BackboardAssistant[]>([]);
+  const [selectedAssistantId, setSelectedAssistantId] = useState<string>("");
+  const [newAssistantName, setNewAssistantName] = useState<string>("");
+  const [creatingAssistant, setCreatingAssistant] = useState(false);
   const [messages, setMessages] = useState<
     { role: "user" | "agent"; text: string }[]
   >([]);
@@ -60,6 +71,7 @@ export function VoiceAgent() {
     addToolCall,
     updateToolCall,
     addRecallResult,
+    setAllMemories,
     resetSession,
   } = useAdminDebug();
 
@@ -193,6 +205,22 @@ export function VoiceAgent() {
     }, [handleToolInvoke]),
   );
 
+  // Fetch available assistants on mount
+  useEffect(() => {
+    listAssistants().then((list) => {
+      setAssistants(list);
+      // Pre-select the current active assistant and load its memories
+      getBackboardSessionInfo().then((info) => {
+        if (info.assistantId) {
+          setSelectedAssistantId(info.assistantId);
+          setSession({ assistantId: info.assistantId });
+          fetchAllMemories().then(setAllMemories);
+        }
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Request mic permissions on mount
   useEffect(() => {
     if (audioDevices.permissionState === "prompt") {
@@ -200,12 +228,44 @@ export function VoiceAgent() {
     }
   }, [audioDevices]);
 
+  const handleCreateAssistant = async () => {
+    const name = newAssistantName.trim();
+    if (!name) return;
+    setCreatingAssistant(true);
+    try {
+      const assistant = await createNewAssistant(name);
+      if (assistant) {
+        setAssistants((prev) => [...prev, assistant]);
+        setSelectedAssistantId(assistant.assistant_id);
+        setSession({ assistantId: assistant.assistant_id });
+        setAllMemories([]);
+        setNewAssistantName("");
+      }
+    } finally {
+      setCreatingAssistant(false);
+    }
+  };
+
+  const handleAssistantChange = async (assistantId: string) => {
+    setSelectedAssistantId(assistantId);
+    if (assistantId) {
+      await setActiveAssistant(assistantId);
+      setSession({ assistantId });
+      fetchAllMemories().then(setAllMemories);
+    }
+  };
+
   const handleStart = async () => {
     try {
       setError("");
       setMessages([]);
       setUserPartialText("");
       resetSession();
+
+      // Ensure the selected assistant is active on the server
+      if (selectedAssistantId) {
+        await setActiveAssistant(selectedAssistantId);
+      }
 
       // Resume AudioContexts (browsers suspend them until user gesture)
       await Promise.all([
@@ -255,6 +315,45 @@ export function VoiceAgent() {
   return (
     <div className="p-8 text-foreground">
       <h1 className="mb-6 text-3xl font-bold">Voice Agent</h1>
+
+      {/* Assistant selector */}
+      <div className="mb-4">
+        <label htmlFor="assistant-select" className="mb-2 block text-lg">
+          Assistant:
+        </label>
+        <select
+          id="assistant-select"
+          value={selectedAssistantId}
+          onChange={(e) => handleAssistantChange(e.target.value)}
+          disabled={isActive}
+          className="w-full rounded border border-foreground/20 bg-background p-2 text-base text-foreground"
+        >
+          <option value="">Loading...</option>
+          {assistants.map((a) => (
+            <option key={a.assistant_id} value={a.assistant_id}>
+              {a.name || a.assistant_id.slice(0, 12)}
+            </option>
+          ))}
+        </select>
+        <div className="mt-2 flex gap-2">
+          <input
+            type="text"
+            placeholder="New assistant name..."
+            value={newAssistantName}
+            onChange={(e) => setNewAssistantName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreateAssistant()}
+            disabled={isActive || creatingAssistant}
+            className="flex-1 rounded border border-foreground/20 bg-background px-2 py-1 text-sm text-foreground placeholder:text-foreground/30"
+          />
+          <button
+            onClick={handleCreateAssistant}
+            disabled={isActive || creatingAssistant || !newAssistantName.trim()}
+            className="cursor-pointer rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500 disabled:cursor-default disabled:opacity-50"
+          >
+            {creatingAssistant ? "Creating..." : "New"}
+          </button>
+        </div>
+      </div>
 
       {/* Mic selector */}
       <div className="mb-4">

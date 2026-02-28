@@ -21,13 +21,13 @@
 - Speechmatics Flow tool calling wired up via WebSocket patching (SDK v0.2.2 lacks native support)
 - Tool definitions injected into the `StartConversation` message at runtime
 - UI indicator: pulsing yellow while executing, green on success, red on failure
-- `recall_memories` tool — Flow passes the user's query; Backboard's vector search finds and returns relevant scored memories
+- `recall_memories` tool — Flow passes the user's query; Backboard recalls relevant memories via native vector search + LLM filtering
 
 ## Memory (Backboard.io)
 
 - Persistent memory layer — the agent remembers family members, preferences, routines across sessions
 - **Mirroring**: every conversation turn is sent to Backboard in the background (fire-and-forget, `memory=Auto`). Backboard automatically extracts and stores relevant memories.
-- **Recall**: `recall_memories` tool sends the user's query to Backboard with `memory=Readonly`. Backboard's vector search finds relevant scored memories from its store. Flow's LLM incorporates these into its spoken response.
+- **Recall**: `recall_memories` tool sends the query to Backboard with `memory=Readonly`. Backboard performs vector search + LLM filtering internally (using Cerebras behind the scenes) and returns matched memories. Fallback: if no active thread, dumps all memories via `GET /memories`. Flow's LLM incorporates the results into its spoken response.
 - New Backboard thread per voice session; memories persist at assistant level across all threads
 - Graceful degradation: if Backboard is unavailable, voice conversation continues normally
 

@@ -2,7 +2,7 @@
 
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
-import { BackboardClient, type BackboardMemory, type RetrievedMemory } from "@/app/lib/backboard";
+import { BackboardClient, type BackboardAssistant, type BackboardMemory, type RetrievedMemory } from "@/app/lib/backboard";
 
 const ASSISTANT_ID_FILE = join(process.cwd(), ".backboard-assistant-id");
 
@@ -51,8 +51,7 @@ async function getAssistantId(): Promise<string> {
   return assistant.assistant_id;
 }
 
-// Current session thread — set by createBackboardThread, read by recallMemories.
-// Single-user hackathon scope; no need for per-user isolation.
+// Current session thread — set by createBackboardThread, used for mirroring + admin panel.
 let currentThreadId: string | null = null;
 
 /**
@@ -84,10 +83,10 @@ export async function mirrorTurnToBackboard(
 ): Promise<void> {
   try {
     const client = getClient();
-    // Send user message (Backboard uses its default model for memory extraction)
+    // Send user message with memory extraction enabled
     await client.sendMessage(threadId, userText, { memory: "Auto" });
-    // Send agent message (so Backboard sees both sides of the conversation)
-    await client.sendMessage(threadId, agentText, { memory: "Auto" });
+    // Send agent message with memory OFF — only user messages should trigger storage
+    await client.sendMessage(threadId, agentText, { memory: "Off" });
     console.log(`[Backboard] Mirrored turn to thread ${threadId}`);
   } catch (err) {
     console.error("[Backboard] Failed to mirror turn:", err);
@@ -126,8 +125,60 @@ export async function fetchAllMemories(): Promise<BackboardMemory[]> {
 }
 
 /**
- * Like recallMemories, but returns structured data alongside the text.
- * The `text` is sent to Flow; the `memories` array feeds the admin panel.
+ * Lists all assistants from Backboard for the current API key.
+ */
+export async function listAssistants(): Promise<BackboardAssistant[]> {
+  try {
+    const client = getClient();
+    return await client.listAssistants();
+  } catch (err) {
+    console.error("[Backboard] Failed to list assistants:", err);
+    return [];
+  }
+}
+
+/**
+ * Sets the active assistant ID (persists to file + cache).
+ * Next thread creation will use this assistant.
+ */
+export async function setActiveAssistant(assistantId: string): Promise<void> {
+  cachedAssistantId = assistantId;
+  currentThreadId = null;
+  await writeFile(ASSISTANT_ID_FILE, assistantId, "utf-8");
+  console.log(`[Backboard] Switched to assistant: ${assistantId}`);
+}
+
+/**
+ * Creates a new assistant with the given name, switches to it, and returns it.
+ */
+export async function createNewAssistant(
+  name: string,
+): Promise<BackboardAssistant | null> {
+  try {
+    const client = getClient();
+    const assistant = await client.createAssistant(
+      name,
+      "You are a caring voice assistant for elderly people. You remember personal details, family members, routines, and preferences shared across conversations.",
+    );
+    // Switch to the new assistant
+    cachedAssistantId = assistant.assistant_id;
+    currentThreadId = null;
+    await writeFile(ASSISTANT_ID_FILE, assistant.assistant_id, "utf-8");
+    console.log(`[Backboard] Created new assistant "${name}": ${assistant.assistant_id}`);
+    return assistant;
+  } catch (err) {
+    console.error("[Backboard] Failed to create assistant:", err);
+    return null;
+  }
+}
+
+/**
+ * Recalls memories via Backboard's native memory=Readonly mode.
+ * Returns structured data: `text` for Flow, `memories` array for admin panel.
+ *
+ * Primary: sends query as a Readonly message on the current thread.
+ * Backboard searches stored memories and returns `retrieved_memories`.
+ * Fallback: if no active thread, dumps all memories via GET /memories.
  */
 export async function recallMemoriesStructured(
   query: string,
@@ -189,22 +240,16 @@ export async function recallMemoriesStructured(
 }
 
 /**
- * Recalls relevant memories using Backboard's LLM (Cerebras) to filter.
+ * Recalls relevant memories using Backboard's native memory=Readonly mode.
+ * Backboard handles vector search and LLM filtering internally (using Cerebras behind the scenes).
  *
  * Primary: sends the query as a Readonly message on the current thread.
- * Backboard searches stored memories, Cerebras picks the relevant ones,
- * and returns a contextual response. The mirrored conversation gives
- * Backboard full context about what was discussed this session.
- *
  * Fallback: if no active thread, dumps all memories via GET /memories.
  */
 export async function recallMemories(query: string): Promise<string> {
   try {
     const client = getClient();
 
-    // Send a Readonly message to Backboard. The response includes
-    // `retrieved_memories` — scored memories from Backboard's vector search.
-    // We use those directly (no need for Backboard's LLM to reformulate).
     if (currentThreadId) {
       const response = await client.sendMessage(
         currentThreadId,
@@ -218,7 +263,6 @@ export async function recallMemories(query: string): Promise<string> {
       );
 
       if (memories && memories.length > 0) {
-        // Deduplicate by memory text (Backboard can return duplicates)
         const unique = [...new Map(memories.map((m) => [m.memory, m])).values()];
         const formatted = unique.map((m) => `- ${m.memory}`).join("\n");
         return `Here is what I remember about the user:\n${formatted}`;

@@ -5,7 +5,7 @@
 - Next.js 16 (App Router, latest as of 2026-02-28)
 - UI: shadcn/ui
 - Voice: Speechmatics Flow (`@speechmatics/flow-client-react` + companion packages)
-- Memory: Backboard.io (persistent memory + vector-search recall)
+- Memory: Backboard.io (persistent memory + recall; Cerebras LLM runs behind Backboard)
 - Target audience: elderly people — prioritize large text, simple navigation, high contrast, minimal cognitive load
 
 # Architecture Philosophy
@@ -20,11 +20,10 @@
 
 # Memory (Backboard.io)
 - `app/lib/backboard.ts` — REST wrapper for Backboard API (no external SDK, pure fetch)
-- `app/actions/backboard.ts` — server actions: createBackboardThread, mirrorTurnToBackboard, recallMemories, recallMemoriesStructured, getBackboardSessionInfo, fetchAllMemories
+- `app/actions/backboard.ts` — server actions: createBackboardThread, mirrorTurnToBackboard, recallMemories, recallMemoriesStructured, getBackboardSessionInfo, fetchAllMemories, listAssistants, setActiveAssistant, createNewAssistant
 - `app/hooks/useConversationMirror.ts` — auto-mirrors conversation turns to Backboard (fire-and-forget); accepts `MirrorCallbacks` for admin panel status reporting
 - **Mirroring** (`memory=Auto`): every turn sent to Backboard in background; Backboard extracts + stores memories
-- **Recall** (`memory=Readonly`): Flow passes user's query via tool; Backboard's vector search returns scored memories from `retrieved_memories` field (deduplicated); Flow's LLM presents them
-- Fallback: if no thread available, falls back to `GET /memories` (dump all)
+- **Recall** (`memory=Readonly`): sends query to Backboard, which performs vector search + LLM filtering internally (Cerebras runs behind Backboard — we never call Cerebras directly). Fallback: if no active thread, dumps all memories via `GET /memories`.
 - Memories persist at the assistant level; new thread created per voice session
 - Backboard failures never break the voice conversation — all errors are caught and logged
 - Env vars: `BACKBOARD_API_KEY` (required)

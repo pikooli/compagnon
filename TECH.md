@@ -24,17 +24,20 @@
 - `app/actions/backboard.ts` — server actions with module-level caching for client + assistant_id + thread_id
   - `createBackboardThread()` — creates thread, stores thread_id server-side, returns it to client
   - `mirrorTurnToBackboard()` — sends user + agent text with `memory=Auto` (Backboard extracts memories)
-  - `recallMemories(query)` — primary: `sendMessage` with `memory=Readonly` on session thread; uses `retrieved_memories` from response (Backboard's vector search with relevance scores, deduplicated); fallback: `GET /memories` dump
-  - `recallMemoriesStructured(query)` — returns `{text, memories[]}` for admin panel display
+  - `recallMemories(query)` — sends query with `memory=Readonly`, Backboard returns matched memories
+  - `recallMemoriesStructured(query)` — same as above but returns `{text, memories[]}` for admin panel
   - `getBackboardSessionInfo()` — returns `{assistantId, threadId}` for admin panel
   - `fetchAllMemories()` — returns all stored `BackboardMemory[]` for admin panel
+  - `listAssistants()` — lists all assistants for the current API key
+  - `setActiveAssistant(id)` — switches active assistant (persists to file + cache)
+  - `createNewAssistant(name)` — creates new assistant, switches to it
 - `app/hooks/useConversationMirror.ts` — client hook that detects completed turn pairs and fires mirror calls; accepts optional `MirrorCallbacks` for status reporting
 - Assistant ID auto-created on first run, persisted to `.backboard-assistant-id` file (gitignored)
-- Auth: `X-API-Key` header with `BACKBOARD_API_KEY` env var
+- Auth: Backboard uses `X-API-Key` header with `BACKBOARD_API_KEY` env var
 
 ## Architecture — Flow vs Backboard
 - **Flow = minimal voice brain**: STT + TTS + lightweight LLM for conversational flow. Does not carry heavy logic or long-term state.
-- **Backboard = secondary backend**: persistent memory, intelligent recall (vector search with scoring), conversation context. Receives full conversation via mirroring.
+- **Backboard = memory backend**: persistent memory extraction (via mirroring), storage, and intelligent recall. Receives full conversation via mirroring. Recall uses Backboard's native vector search + LLM filtering (Cerebras runs behind Backboard — we don't call it directly).
 - Flow delegates to Backboard via tools (`recall_memories`) when it needs context beyond the current conversation.
 
 ## Architecture

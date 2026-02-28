@@ -5,7 +5,9 @@ const BASE_URL = "https://app.backboard.io/api";
 export interface BackboardAssistant {
   assistant_id: string;
   name: string;
-  system_prompt: string;
+  system_prompt?: string;
+  description?: string;
+  created_at?: string;
 }
 
 export interface BackboardThread {
@@ -109,6 +111,18 @@ export class BackboardClient {
         ...(options?.model_name && { model_name: options.model_name }),
       },
     );
+  }
+
+  async listAssistants(): Promise<BackboardAssistant[]> {
+    const raw = await this.request<BackboardAssistant[] | { assistants: BackboardAssistant[] }>(
+      "GET",
+      "/assistants",
+    );
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray((raw as { assistants: BackboardAssistant[] }).assistants)) {
+      return (raw as { assistants: BackboardAssistant[] }).assistants;
+    }
+    return [];
   }
 
   async listMemories(assistantId: string): Promise<BackboardMemory[]> {
