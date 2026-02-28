@@ -1,3 +1,4 @@
+import { connectMongo } from "@/app/lib/mongoose/mongoose";
 import { ChatCerebras } from "@langchain/cerebras";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { createBrainTools, type BrainContext } from "./tools";
@@ -37,6 +38,7 @@ export async function invokeBrain(
   message: string,
   ctx: BrainContext,
 ): Promise<string> {
+  await connectMongo();
   const model = getModel();
   const tools = createBrainTools(ctx);
 
