@@ -26,17 +26,14 @@ const upsertContact = async ({ contact }: z.infer<typeof upsertContactSchema>) =
     return { result: 'Contact upserted successfully' };
 }
 
-const searchContactSchema = z.object({
+const searchContactByQuerySchema = z.object({
     query: z.string().describe("The query to search for a contact"),
 });
 
-const searchContact = async (props: z.infer<typeof searchContactSchema>) => {
+const searchContactByQuery = async (props: z.infer<typeof searchContactByQuerySchema>) => {
     try {
-        console.log('props =========', props);
         const query = props.query;
-        console.log('searchContact =========', query);
-        const contacts = await contactService.getContacts(query);
-        console.log('contacts =========', contacts);
+        const contacts = await contactService.getContactsbyQuery(query);
         return { result: contacts };
     } catch (error) {
         console.error('Error searching for contact =========', error);
@@ -44,9 +41,37 @@ const searchContact = async (props: z.infer<typeof searchContactSchema>) => {
     }
 }
 
+export const searchContactSchema = z.object({
+    name: z.string().optional().describe("The name of the contact"),
+    company: z.string().optional().describe("The company of the contact"),
+    role: z.string().optional().describe("The role of the contact"),
+    city: z.string().optional().describe("The city of the contact"),
+    email: z.string().optional().describe("The email of the contact"),
+    phone: z.string().optional().describe("The phone of the contact"),
+    tags: z.array(z.string()).optional().describe("The tags of the contact"),
+    notes: z.string().optional().describe("The notes of the contact"),
+});
+
+
+const searchContact = async (props: z.infer<typeof searchContactSchema>) => {
+    try {
+        const contacts = await contactService.getContacts(props);
+        return { result: contacts };
+    } catch (error) {
+        console.error('Error searching for contact =========', error);
+        return { error: 'Error searching for contact' };
+    }
+}
+
+export const searchContactByQueryTool = tool(searchContactByQuery, {
+    name: "searchContactByQuery",
+    description: `Search for a contact, someone. use it when you need to search by meaning or that the other search fit the user request`,
+    schema: searchContactByQuerySchema,
+});
+
 export const searchContactTool = tool(searchContact, {
     name: "searchContact",
-    description: `Search for a contact, someone. user it when user ask for someone information or to find someone`,
+    description: `Search for a contact, use when it need a search by specific fields`,
     schema: searchContactSchema,
 });
 
@@ -57,4 +82,4 @@ export const upsertContactTool = tool(upsertContact, {
     schema: upsertContactSchema,
 });
 
-export const tools = [searchContactTool, upsertContactTool];
+export const tools = [searchContactByQueryTool, searchContactTool, upsertContactTool];

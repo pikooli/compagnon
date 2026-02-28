@@ -1,10 +1,23 @@
+import { searchContactSchema } from "@/app/lib/brain/tools/contact";
 import { Contact, ContactDocument, ContactModel } from "@/app/lib/mongoose/schema/contact.schema";
 import { qdrantTools } from "@/app/lib/qdrant";
+import { z } from "zod";
+
 
 const collectionName = 'contacts';
 
 export const contactService = {
-    getContacts: async (query: string) => {
+    getContacts: async (props: z.infer<typeof searchContactSchema>) => {
+        const query: Record<string, any> = {};
+        Object.entries(props).forEach(([key, value]) => {
+            if (value) {
+                query[key] = value;
+            }
+        });
+        const contacts = await ContactModel.find(query);
+        return contacts;
+    },
+    getContactsbyQuery: async (query: string) => {
         const contactsResult = await qdrantTools.searchSimilar({ collectionName, query });
         const contactsIds = contactsResult.map((contact) => contact.payload?._id);
         const contacts = await ContactModel.find({ _id: { $in: contactsIds as string[] } });

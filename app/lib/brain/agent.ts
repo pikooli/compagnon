@@ -21,13 +21,7 @@ function getModel(): ChatCerebras {
 }
 
 const SYSTEM_PROMPT =
-  "You are a helpful, caring assistant for elderly people. " +
-  "You have access to tools to recall memories from past conversations and check the user's Google Calendar. " +
-  "When the user asks about something personal or references the past, use the recall_memories tool. " +
-  "When the user asks about their schedule, appointments, meetings, or what's coming up, use the get_calendar_events tool. " +
-  "If the calendar is not connected, let the user know they can connect it using the button in the app. " +
-  "Be warm, patient, and concise in your responses. " +
-  "Answer directly — do not explain your reasoning process.";
+  "You are a helpful. ALWAYS CALL TOOLS" 
 
 /**
  * Invokes the brain agent with a user message.
