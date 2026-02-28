@@ -1,5 +1,5 @@
+import { readFile, unlink, writeFile } from "fs/promises";
 import { google } from "googleapis";
-import { readFile, writeFile, unlink } from "fs/promises";
 import { join } from "path";
 
 const TOKEN_PATH = join(process.cwd(), ".google-calendar-tokens.json");
@@ -226,7 +226,6 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
   });
 
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-  await calendar.events.delete({ calendarId: "primary", eventId });
   await calendar.events.delete({ calendarId: "primary", eventId });
 }
 
