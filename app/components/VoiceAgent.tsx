@@ -167,6 +167,12 @@ export function VoiceAgent() {
     useCallback((ev: FlowIncomingMessageEvent) => {
       const msg = ev.data;
 
+      // ToolInvoke is injected via WS patch and not in the SDK type union
+      if ((msg as unknown as { message: string }).message === "ToolInvoke") {
+        handleToolInvoke(msg as unknown as ToolInvokeMessage);
+        return;
+      }
+
       switch (msg.message) {
         case "ResponseStarted":
           setUserPartialText("");
@@ -206,9 +212,6 @@ export function VoiceAgent() {
           setError(JSON.stringify(msg));
           setIsActive(false);
           setIsAgentSpeaking(false);
-          break;
-        case "ToolInvoke":
-          handleToolInvoke(msg as unknown as ToolInvokeMessage);
           break;
       }
     }, [handleToolInvoke]),
@@ -324,19 +327,20 @@ export function VoiceAgent() {
     audioDevices.permissionState === "granted" ? audioDevices.deviceList : [];
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-[#070d1f]">
       {/* ── Gradient hero / controls area ── */}
-      <div className="bg-gradient-to-b from-blue-50 via-blue-50/50 to-white px-8 pt-8 pb-8">
+      <div className="px-8 pt-8 pb-8" style={{ background: "radial-gradient(circle at top, #0f1c3f, #070d1f 80%)" }}>
 
         {/* Header */}
         <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-md">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="white" className="h-5 w-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-            </svg>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/parrot3.png"
+            alt="Compagnon logo"
+            className="h-10 w-10 flex-shrink-0 rounded-xl object-cover"
+          />
           <div>
-            <h1 className="text-2xl font-bold leading-tight text-slate-800">Compagnon</h1>
+            <h1 className="text-2xl font-bold leading-tight text-white">Compagnon</h1>
             <p className="text-sm text-slate-400">Your AI Voice Companion</p>
           </div>
         </div>
@@ -414,7 +418,7 @@ export function VoiceAgent() {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mb-4 rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
@@ -423,10 +427,10 @@ export function VoiceAgent() {
         {activeToolCall && (
           <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
             activeToolCall.state === "executing"
-              ? "border-amber-100 bg-amber-50 text-amber-700"
+              ? "border-amber-900/50 bg-amber-950/30 text-amber-400"
               : activeToolCall.state === "completed"
-                ? "border-green-100 bg-green-50 text-green-700"
-                : "border-red-100 bg-red-50 text-red-700"
+                ? "border-green-900/50 bg-green-950/30 text-green-400"
+                : "border-red-900/50 bg-red-950/30 text-red-400"
           }`}>
             {activeToolCall.state === "executing" && "Thinking…"}
             {activeToolCall.state === "completed" && "Got it!"}
@@ -437,8 +441,8 @@ export function VoiceAgent() {
         {/* ── Settings cards ── */}
         <div className="space-y-3">
           {/* Assistant selector */}
-          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-            <label htmlFor="assistant-select" className="mb-2 block text-sm font-semibold text-slate-600">
+          <div className="rounded-xl border border-[#1e2d4a] bg-[#0f1c3f] p-4">
+            <label htmlFor="assistant-select" className="mb-2 block text-sm font-semibold text-slate-300">
               Assistant Profile
             </label>
             <select
@@ -446,7 +450,7 @@ export function VoiceAgent() {
               value={selectedAssistantId}
               onChange={(e) => handleAssistantChange(e.target.value)}
               disabled={isActive}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-60"
+              className="w-full rounded-lg border border-[#1e2d4a] bg-[#0b1528] px-3 py-2.5 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-60"
             >
               <option value="">Loading…</option>
               {assistants.map((a) => (
@@ -463,7 +467,7 @@ export function VoiceAgent() {
                 onChange={(e) => setNewAssistantName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateAssistant()}
                 disabled={isActive || creatingAssistant}
-                className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-60"
+                className="flex-1 rounded-lg border border-[#1e2d4a] bg-[#0b1528] px-3 py-1.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-60"
               />
               <button
                 onClick={handleCreateAssistant}
@@ -476,8 +480,8 @@ export function VoiceAgent() {
           </div>
 
           {/* Microphone selector */}
-          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-            <label htmlFor="mic-select" className="mb-2 block text-sm font-semibold text-slate-600">
+          <div className="rounded-xl border border-[#1e2d4a] bg-[#0f1c3f] p-4">
+            <label htmlFor="mic-select" className="mb-2 block text-sm font-semibold text-slate-300">
               Microphone
             </label>
             <select
@@ -485,7 +489,7 @@ export function VoiceAgent() {
               value={selectedDeviceId}
               onChange={(e) => setSelectedDeviceId(e.target.value)}
               disabled={isActive}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-60"
+              className="w-full rounded-lg border border-[#1e2d4a] bg-[#0b1528] px-3 py-2.5 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-60"
             >
               <option value="">Default Microphone</option>
               {deviceList.map((d) => (
@@ -497,8 +501,8 @@ export function VoiceAgent() {
           </div>
 
           {/* Google Calendar */}
-          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-            <p className="mb-2 text-sm font-semibold text-slate-600">Google Calendar</p>
+          <div className="rounded-xl border border-[#1e2d4a] bg-[#0f1c3f] p-4">
+            <p className="mb-2 text-sm font-semibold text-slate-300">Google Calendar</p>
             <GoogleCalendarConnect disabled={isActive} />
           </div>
         </div>
@@ -508,8 +512,8 @@ export function VoiceAgent() {
       <div className="flex-1 px-8 py-6">
         {messages.length === 0 && !userPartialText && !activeToolCall && (
           <div className="flex flex-col items-center py-12 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-8 w-8 text-slate-300">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#0f1c3f]">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-8 w-8 text-slate-600">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
               </svg>
             </div>
@@ -530,7 +534,7 @@ export function VoiceAgent() {
                 <div className={`max-w-[85%] rounded-2xl px-5 py-3 ${
                   msg.role === "user"
                     ? "rounded-br-sm bg-blue-600 text-white"
-                    : "rounded-bl-sm border border-slate-100 bg-white text-slate-800 shadow-sm"
+                    : "rounded-bl-sm border border-[#1e2d4a] bg-[#1e293b] text-white"
                 }`}>
                   <p className="text-base leading-relaxed">
                     {msg.text}

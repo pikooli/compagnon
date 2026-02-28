@@ -16,7 +16,9 @@ export function LandingPage({ onGetStarted }: { onGetStarted: () => void }) {
       />
 
       {/* Nav */}
-      <nav className="relative px-20 py-8 text-lg font-semibold tracking-widest text-blue-400">
+      <nav className="relative flex items-center gap-3 px-20 py-8 text-lg font-semibold tracking-widest text-blue-400">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/parrot3.png" alt="Compagnon logo" className="h-10 w-10 rounded-xl object-cover" />
         Compagnon
       </nav>
 
