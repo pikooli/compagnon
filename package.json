@@ -12,6 +12,8 @@
     "@langchain/cerebras": "^1.0.3",
     "@langchain/core": "^1.1.29",
     "@langchain/langgraph": "^1.2.0",
+    "@langchain/openai": "^1.2.11",
+    "@qdrant/js-client-rest": "^1.17.0",
     "@speechmatics/auth": "^0.1.0",
     "@speechmatics/browser-audio-input": "^2.0.3",
     "@speechmatics/browser-audio-input-react": "^2.0.3",
@@ -20,7 +22,9 @@
     "@speechmatics/web-pcm-player": "^1.0.0",
     "@speechmatics/web-pcm-player-react": "^2.0.0",
     "googleapis": "^171.4.0",
+    "mongoose": "^9.2.3",
     "next": "16.1.6",
+    "openai": "^6.25.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "^4.3.6"

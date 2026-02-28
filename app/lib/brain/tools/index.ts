@@ -2,7 +2,9 @@ import { BackboardClient } from "@/app/lib/backboard";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
+import { tools as contactTools } from "./contact";
 import { getCalendarEvents } from "./google/calendar";
+import { tools as productTools } from "./product";
 
 export interface BrainContext {
   threadId?: string | null;
@@ -59,5 +61,5 @@ export function createBrainTools(ctx: BrainContext) {
     },
   );
 
-  return [recallMemories, getCalendarEvents];
+  return [recallMemories, getCalendarEvents, ...contactTools, ...productTools];
 }
