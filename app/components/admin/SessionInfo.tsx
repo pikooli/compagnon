@@ -79,19 +79,19 @@ export function SessionInfo() {
     <div className="space-y-4">
       {/* IDs + Duration */}
       <div className="space-y-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           Session
         </h3>
         <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-          <span className="text-foreground/50">Thread</span>
+          <span className="text-slate-400">Thread</span>
           <span className="font-mono truncate">
             {session.threadId ?? "—"}
           </span>
-          <span className="text-foreground/50">Assistant</span>
+          <span className="text-slate-400">Assistant</span>
           <span className="font-mono truncate">
             {session.assistantId ?? "—"}
           </span>
-          <span className="text-foreground/50">Duration</span>
+          <span className="text-slate-400">Duration</span>
           <span>
             {session.startedAt ? (
               <SessionTimer startedAt={session.startedAt} />
@@ -99,7 +99,7 @@ export function SessionInfo() {
               "—"
             )}
           </span>
-          <span className="text-foreground/50">Calendar</span>
+          <span className="text-slate-400">Calendar</span>
           <span>
             {calendarConnected === null
               ? "..."
@@ -113,7 +113,7 @@ export function SessionInfo() {
       {/* All Stored Memories */}
       <div>
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Stored Memories ({allMemories.length})
           </h3>
           <button
@@ -125,7 +125,7 @@ export function SessionInfo() {
           </button>
         </div>
         {allMemories.length === 0 ? (
-          <p className="mt-1 text-xs text-foreground/30 italic">
+          <p className="mt-1 text-xs text-slate-500 italic">
             No memories yet
           </p>
         ) : (
@@ -133,11 +133,11 @@ export function SessionInfo() {
             {allMemories.map((m) => (
               <div
                 key={m.id}
-                className="rounded bg-foreground/5 px-2 py-1 text-xs"
+                className="rounded bg-[#0f1c3f] px-2 py-1 text-xs"
               >
                 <span>{m.content}</span>
                 {m.created_at && (
-                  <span className="ml-2 text-foreground/30">
+                  <span className="ml-2 text-slate-500">
                     {new Date(m.created_at).toLocaleDateString()}
                   </span>
                 )}
@@ -149,11 +149,11 @@ export function SessionInfo() {
 
       {/* Recall Results */}
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           Recall Results ({recallResults.length})
         </h3>
         {recallResults.length === 0 ? (
-          <p className="mt-1 text-xs text-foreground/30 italic">
+          <p className="mt-1 text-xs text-slate-500 italic">
             No recalls yet
           </p>
         ) : (
@@ -161,16 +161,16 @@ export function SessionInfo() {
             {recallResults.map((r) => (
               <div
                 key={r.id}
-                className="rounded border border-foreground/10 bg-foreground/5 p-2"
+                className="rounded border border-[#1e2d4a] bg-[#0f1c3f] p-2"
               >
                 <div className="text-xs font-medium text-purple-400">
                   &quot;{r.query}&quot;
                 </div>
-                <div className="text-[10px] text-foreground/30">
+                <div className="text-[10px] text-slate-500">
                   {new Date(r.timestamp).toLocaleTimeString()}
                 </div>
                 {r.memories.length === 0 ? (
-                  <p className="mt-1 text-xs text-foreground/30 italic">
+                  <p className="mt-1 text-xs text-slate-500 italic">
                     No matches
                   </p>
                 ) : (
@@ -180,7 +180,7 @@ export function SessionInfo() {
                         <span className="shrink-0 rounded bg-purple-500/20 px-1 text-[10px] text-purple-300">
                           {m.score.toFixed(2)}
                         </span>
-                        <span className="text-foreground/70">{m.memory}</span>
+                        <span className="text-slate-200">{m.memory}</span>
                       </div>
                     ))}
                   </div>
