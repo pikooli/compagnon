@@ -9,6 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@speechmatics/auth": "^0.1.0",
+    "@speechmatics/browser-audio-input": "^2.0.3",
+    "@speechmatics/browser-audio-input-react": "^2.0.3",
+    "@speechmatics/flow-client": "^0.2.2",
+    "@speechmatics/flow-client-react": "^0.2.1",
+    "@speechmatics/web-pcm-player": "^1.0.0",
+    "@speechmatics/web-pcm-player-react": "^2.0.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

@@ -1,0 +1,95 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \".claude/statusline.js\""
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Codes/_cc/CC_Win_HUD/src/hooks/hook-session-start.js\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Codes/_cc/CC_Win_HUD/src/hooks/hook-prompt-submit.js\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Codes/_cc/CC_Win_HUD/src/hooks/hook-stop.js\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Codes/_cc/CC_Win_HUD/src/hooks/hook-session-end.js\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Codes/_cc/CC_Win_HUD/src/hooks/hook-pre-tool-use.js\"",
+            "timeout": 10,
+            "async": true
+          }
+        ],
+        "matcher": "EnterPlanMode|ExitPlanMode|AskUserQuestion"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Codes/_cc/CC_Win_HUD/src/hooks/hook-post-tool-use.js\"",
+            "timeout": 10,
+            "async": true
+          }
+        ],
+        "matcher": "EnterPlanMode|ExitPlanMode|AskUserQuestion"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Codes/_cc/CC_Win_HUD/src/hooks/hook-post-tool-use.js\"",
+            "timeout": 10,
+            "async": true
+          }
+        ],
+        "matcher": "EnterPlanMode|ExitPlanMode|AskUserQuestion"
+      }
+    ]
+  }
+}
