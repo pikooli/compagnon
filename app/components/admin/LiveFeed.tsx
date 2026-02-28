@@ -14,7 +14,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${colors[status] ?? "bg-foreground/10 text-slate-600"}`}
+      className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${colors[status] ?? "bg-foreground/10 text-slate-400"}`}
     >
       {status}
     </span>
@@ -31,7 +31,7 @@ function MirrorLog() {
 
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
         Mirror Log ({mirrorLog.length})
       </h3>
       {mirrorLog.length === 0 ? (
@@ -46,7 +46,7 @@ function MirrorLog() {
           {mirrorLog.map((entry) => (
             <div
               key={entry.id}
-              className="rounded border-l-2 bg-slate-100 p-2"
+              className="rounded border-l-2 bg-[#0f1c3f] p-2"
               style={{
                 borderColor:
                   entry.status === "sent"
@@ -63,16 +63,16 @@ function MirrorLog() {
                 </span>
               </div>
               <div className="mt-1 text-xs">
-                <span className="text-slate-600">User: </span>
-                <span className="text-slate-700">
+                <span className="text-slate-400">User: </span>
+                <span className="text-slate-200">
                   {entry.userText.length > 80
                     ? entry.userText.slice(0, 80) + "..."
                     : entry.userText}
                 </span>
               </div>
               <div className="text-xs">
-                <span className="text-slate-600">Agent: </span>
-                <span className="text-slate-700">
+                <span className="text-slate-400">Agent: </span>
+                <span className="text-slate-200">
                   {entry.agentText.length > 80
                     ? entry.agentText.slice(0, 80) + "..."
                     : entry.agentText}
@@ -99,7 +99,7 @@ function ToolCallLog() {
 
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
         Tool Calls ({toolCallHistory.length})
       </h3>
       {toolCallHistory.length === 0 ? (
@@ -120,7 +120,7 @@ function ToolCallLog() {
             return (
               <div
                 key={entry.id}
-                className="rounded border-l-2 bg-slate-100 p-2"
+                className="rounded border-l-2 bg-[#0f1c3f] p-2"
                 style={{
                   borderColor:
                     entry.status === "completed"
@@ -140,17 +140,17 @@ function ToolCallLog() {
                   </span>
                 </div>
                 <div className="mt-1 text-xs">
-                  <span className="text-slate-600">Args: </span>
-                  <span className="font-mono text-slate-600">
+                  <span className="text-slate-400">Args: </span>
+                  <span className="font-mono text-slate-400">
                     {JSON.stringify(entry.args).slice(0, 100)}
                   </span>
                 </div>
                 {entry.result && (
                   <details className="mt-1">
-                    <summary className="cursor-pointer text-xs text-slate-600">
+                    <summary className="cursor-pointer text-xs text-slate-400">
                       Result
                     </summary>
-                    <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap text-[10px] text-slate-600">
+                    <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap text-[10px] text-slate-400">
                       {entry.result}
                     </pre>
                   </details>

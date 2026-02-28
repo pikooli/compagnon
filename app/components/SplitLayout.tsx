@@ -7,10 +7,10 @@ export function SplitLayout({
 }) {
   return (
     <div className="flex h-screen">
-      <div className="w-1/2 overflow-y-auto bg-white">
+      <div className="w-1/2 overflow-y-auto bg-[#070d1f]">
         {left}
       </div>
-      <div className="w-1/2 overflow-y-auto border-l border-slate-200 bg-slate-50">
+      <div className="w-1/2 overflow-y-auto bg-[#070d1f] border-l border-[#1e2d4a]">
         {right}
       </div>
     </div>
