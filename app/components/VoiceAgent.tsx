@@ -14,6 +14,8 @@ import {
 } from "@speechmatics/browser-audio-input-react";
 import { usePCMAudioPlayerContext } from "@speechmatics/web-pcm-player-react";
 import { getJWT } from "@/app/actions/auth";
+import { useFlowToolCalling } from "@/app/hooks/useFlowToolCalling";
+import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
 
 const AGENT_ID = "1d9e7010-5c07-40d4-8088-42a5a0bc5645:latest";
 
@@ -42,6 +44,7 @@ export function VoiceAgent() {
   const { startRecording, stopRecording, isRecording, audioContext: recorderAudioContext } =
     usePCMAudioRecorderContext();
   const { playAudio, audioContext: playerAudioContext } = usePCMAudioPlayerContext();
+  const { activeToolCall, handleToolInvoke } = useFlowToolCalling();
 
   // Use ref so the audio listener always sees latest value without re-registering
   const isActiveRef = useRef(false);
@@ -120,8 +123,11 @@ export function VoiceAgent() {
           setError(JSON.stringify(msg));
           setIsActive(false);
           break;
+        case "ToolInvoke":
+          handleToolInvoke(msg as unknown as ToolInvokeMessage);
+          break;
       }
-    }, []),
+    }, [handleToolInvoke]),
   );
 
   // Request mic permissions on mount
@@ -217,6 +223,29 @@ export function VoiceAgent() {
         Socket: {socketState ?? "idle"} | Recording:{" "}
         {isRecording ? "yes" : "no"}
       </p>
+
+      {/* Tool call status */}
+      {activeToolCall && (
+        <div
+          className={`mb-4 rounded-lg p-4 text-lg ${
+            activeToolCall.state === "executing"
+              ? "animate-pulse bg-yellow-500/20 text-yellow-700 dark:text-yellow-300"
+              : activeToolCall.state === "completed"
+                ? "bg-green-500/20 text-green-700 dark:text-green-300"
+                : "bg-red-500/20 text-red-700 dark:text-red-300"
+          }`}
+        >
+          {activeToolCall.state === "executing" && (
+            <span>Looking up your information...</span>
+          )}
+          {activeToolCall.state === "completed" && (
+            <span>Found your information!</span>
+          )}
+          {activeToolCall.state === "failed" && (
+            <span>Could not look up information.</span>
+          )}
+        </div>
+      )}
 
       {/* Error */}
       {error && (
