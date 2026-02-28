@@ -227,7 +227,6 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
 
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
   await calendar.events.delete({ calendarId: "primary", eventId });
-  await calendar.events.delete({ calendarId: "primary", eventId });
 }
 
 export async function updateCalendarEvent(
