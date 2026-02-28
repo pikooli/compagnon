@@ -57,5 +57,6 @@ Only after these steps are done, enter plan mode.
 - Update SPECS.md, TECH.md, CLAUDE.md as you go
 
 ## Merging
-- When user says a branch is "ok" (or equivalent): commit, merge to main, delete the branch
+- When user says a branch is "ok" (or equivalent): commit, merge to main, delete the branch, push to remote
+- Always push main to remote after merging — remote must stay up to date
 - No PRs — direct merge workflow
