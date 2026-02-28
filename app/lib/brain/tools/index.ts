@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { tools as contactTools } from "./contact";
 import { getCalendarEvents, createCalendarEventTool, updateCalendarEventTool, deleteCalendarEventTool } from "./google/calendar";
+import { getRecentEmailsTool, readEmailBodyTool, sendEmailTool, confirmSendEmailTool } from "./google/gmail";
 import { tools as productTools } from "./product";
 
 export interface BrainContext {
@@ -61,5 +62,5 @@ export function createBrainTools(ctx: BrainContext) {
     },
   );
 
-  return [recallMemories, getCalendarEvents, createCalendarEventTool, updateCalendarEventTool, deleteCalendarEventTool, ...contactTools, ...productTools];
+  return [recallMemories, getCalendarEvents, createCalendarEventTool, updateCalendarEventTool, deleteCalendarEventTool, getRecentEmailsTool, readEmailBodyTool, sendEmailTool, confirmSendEmailTool, ...contactTools, ...productTools];
 }

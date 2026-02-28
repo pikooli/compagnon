@@ -34,6 +34,7 @@ import {
 import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
 import { useAdminDebug } from "@/app/contexts/AdminDebugContext";
 import { GoogleCalendarConnect } from "@/app/components/GoogleCalendarConnect";
+import { GmailConnect } from "@/app/components/GmailConnect";
 
 const AGENT_ID = "1d9e7010-5c07-40d4-8088-42a5a0bc5645:latest";
 
@@ -363,6 +364,11 @@ export function VoiceAgent() {
       {/* Google Calendar connection */}
       <div className="mb-4">
         <GoogleCalendarConnect disabled={isActive} />
+      </div>
+
+      {/* Gmail connection */}
+      <div className="mb-4">
+        <GmailConnect disabled={isActive} />
       </div>
 
       {/* Mic selector */}

@@ -58,6 +58,22 @@
 - Optional env vars for bootstrapping without OAuth flow: `GOOGLE_ACCESS_TOKEN`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_EXPIRY_DATE`
 - Optional: `GOOGLE_REDIRECT_URI` (defaults to `http://localhost:3000/api/google-calendar/callback`)
 
+# Google Gmail
+- `app/lib/google-gmail.ts` — OAuth2 client, token management, Gmail API functions
+- `app/api/google-gmail/auth-url/route.ts` — GET: returns OAuth consent URL
+- `app/api/google-gmail/callback/route.ts` — GET: OAuth callback, exchanges code for tokens
+- `app/api/google-gmail/status/route.ts` — GET: returns `{ connected: boolean }`
+- `app/api/google-gmail/disconnect/route.ts` — POST: deletes token file
+- `app/components/GmailConnect.tsx` — connect/disconnect button (used in VoiceAgent)
+- OAuth tokens persisted to `.google-gmail-tokens.json` (gitignored, separate from Calendar tokens)
+- Token auto-refresh handled by `googleapis` OAuth2Client `tokens` event
+- Scopes: `gmail.readonly`, `gmail.compose`, `gmail.send`
+- **Draft-first send pattern**: `send_email` brain tool always creates a draft (never sends). Only `confirm_send_email` actually sends — called only after explicit user confirmation. Protects elderly users from accidental sends.
+- Brain tools: `get_recent_emails`, `read_email_body`, `send_email` (draft-only), `confirm_send_email`
+- Gmail failures never break the voice conversation — all errors caught and logged
+- Env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (shared with Calendar, required)
+- Optional: `GOOGLE_GMAIL_REDIRECT_URI` (defaults to `http://localhost:3000/api/google-gmail/callback`)
+
 # Admin Debug Panel
 - 50/50 split layout: voice agent (left), admin panel (right). Always visible.
 - `app/contexts/AdminDebugContext.tsx` — React context shared between VoiceAgent (data producer) and AdminPanel (data consumer)
