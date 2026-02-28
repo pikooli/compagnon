@@ -13,11 +13,11 @@
 - `@speechmatics/browser-audio-input` + `-react` — Mic capture
 - `@speechmatics/web-pcm-player` + `-react` — Audio playback
 
-## Tool Calling (TEMPORARY — testing only, will be removed)
+## Tool Calling
 - `app/lib/flow-tools.ts` — tool type definitions, tool registry (`TOOLS`), and executor (`executeToolCall`)
 - `app/hooks/useFlowToolCalling.ts` — custom hook that patches `WebSocket.send` to inject `tools` into `StartConversation`, handles `ToolInvoke` messages, and sends `ToolResult` back
 - SDK v0.2.2 has no native tool calling support; we access private `FlowClient` internals via `as any` casts
-- The `get_data` tool is hardcoded with a 3s fake delay — placeholder for real tools later
+- TEMPORARY: the `get_data` tool is hardcoded with a 3s fake delay — will be replaced with a real implementation
 
 ## Architecture
 - JWT generated server-side via Next.js server action (`app/actions/auth.ts`)

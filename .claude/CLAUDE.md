@@ -7,10 +7,10 @@
 - Voice: Speechmatics Flow (`@speechmatics/flow-client-react` + companion packages)
 - Target audience: elderly people — prioritize large text, simple navigation, high contrast, minimal cognitive load
 
-# Tool Calling (TEMPORARY)
-- `app/lib/flow-tools.ts` has a hardcoded `get_data` test tool — will be replaced with real tools
+# Tool Calling
 - `app/hooks/useFlowToolCalling.ts` patches WebSocket to work around SDK v0.2.2 lacking tool support
 - When SDK is updated with native tool calling, refactor to remove the WS patching
+- TEMPORARY: `get_data` in `app/lib/flow-tools.ts` is a hardcoded test tool — will be replaced with a real implementation
 
 # Important
 
