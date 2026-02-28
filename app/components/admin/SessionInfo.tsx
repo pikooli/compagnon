@@ -34,6 +34,15 @@ export function SessionInfo() {
   } = useAdminDebug();
 
   const [memoriesLoading, setMemoriesLoading] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
+
+  // Check calendar connection status on mount
+  useEffect(() => {
+    fetch("/api/google-calendar/status")
+      .then((res) => res.json())
+      .then((data) => setCalendarConnected(data.connected))
+      .catch(() => setCalendarConnected(false));
+  }, []);
 
   // Fetch memories on session start
   useEffect(() => {
@@ -89,6 +98,14 @@ export function SessionInfo() {
             ) : (
               "—"
             )}
+          </span>
+          <span className="text-foreground/50">Calendar</span>
+          <span>
+            {calendarConnected === null
+              ? "..."
+              : calendarConnected
+                ? <span className="text-green-500">Connected</span>
+                : "Not connected"}
           </span>
         </div>
       </div>

@@ -19,6 +19,7 @@
     "@speechmatics/flow-client-react": "^0.2.1",
     "@speechmatics/web-pcm-player": "^1.0.0",
     "@speechmatics/web-pcm-player-react": "^2.0.0",
+    "googleapis": "^171.4.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

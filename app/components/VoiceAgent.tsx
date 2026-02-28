@@ -33,6 +33,7 @@ import {
 } from "@/app/hooks/useConversationMirror";
 import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
 import { useAdminDebug } from "@/app/contexts/AdminDebugContext";
+import { GoogleCalendarConnect } from "@/app/components/GoogleCalendarConnect";
 
 const AGENT_ID = "1d9e7010-5c07-40d4-8088-42a5a0bc5645:latest";
 
@@ -357,6 +358,11 @@ export function VoiceAgent() {
             {creatingAssistant ? "Creating..." : "New"}
           </button>
         </div>
+      </div>
+
+      {/* Google Calendar connection */}
+      <div className="mb-4">
+        <GoogleCalendarConnect disabled={isActive} />
       </div>
 
       {/* Mic selector */}

@@ -22,7 +22,7 @@
 - `app/api/brain/route.ts` — POST endpoint: `{ message, threadId?, assistantId? }` → `{ response }`
 - Model: Cerebras `gpt-oss-120b` (MoE, ~3,000 tokens/sec)
 - Agent re-created per request (graph compilation is lightweight); LLM instance cached
-- Brain tools: `recall_memories` (queries Backboard API for stored memories)
+- Brain tools: `recall_memories` (queries Backboard API for stored memories), `get_calendar_events` (reads Google Calendar)
 - New tools should be added to `app/lib/brain/tools.ts` in the `createBrainTools` function
 - Env vars: `CEREBRAS_API_KEY` (required)
 
@@ -42,6 +42,21 @@
 - Backboard failures never break the voice conversation — all errors are caught and logged
 - Env vars: `BACKBOARD_API_KEY` (required)
 - Assistant ID auto-persisted to `.backboard-assistant-id` file (gitignored, created on first run)
+
+# Google Calendar
+- `app/lib/google-calendar.ts` — OAuth2 client, token management, `listCalendarEvents()` function
+- `app/api/google-calendar/auth-url/route.ts` — GET: returns OAuth consent URL
+- `app/api/google-calendar/callback/route.ts` — GET: OAuth callback, exchanges code for tokens
+- `app/api/google-calendar/status/route.ts` — GET: returns `{ connected: boolean }`
+- `app/api/google-calendar/disconnect/route.ts` — POST: deletes token file
+- `app/components/GoogleCalendarConnect.tsx` — connect/disconnect button (used in VoiceAgent)
+- OAuth tokens persisted to `.google-calendar-tokens.json` (gitignored, auto-created on OAuth)
+- Token auto-refresh handled by `googleapis` OAuth2Client `tokens` event
+- Read-only access (scope: `calendar.readonly`), single Google account at a time
+- Calendar failures never break the voice conversation — all errors caught and logged
+- Env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (required for calendar feature)
+- Optional env vars for bootstrapping without OAuth flow: `GOOGLE_ACCESS_TOKEN`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_EXPIRY_DATE`
+- Optional: `GOOGLE_REDIRECT_URI` (defaults to `http://localhost:3000/api/google-calendar/callback`)
 
 # Admin Debug Panel
 - 50/50 split layout: voice agent (left), admin panel (right). Always visible.

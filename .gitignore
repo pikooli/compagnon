@@ -36,6 +36,9 @@ yarn-error.log*
 # Backboard assistant ID (auto-generated, local to each dev machine)
 .backboard-assistant-id
 
+# Google Calendar OAuth tokens (auto-generated, contains secrets)
+.google-calendar-tokens.json
+
 # vercel
 .vercel
 
