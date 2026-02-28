@@ -17,7 +17,7 @@
 - `app/lib/flow-tools.ts` — tool type definitions, tool registry (`TOOLS`), and executor (`executeToolCall`)
 - `app/hooks/useFlowToolCalling.ts` — custom hook that patches `WebSocket.send` to inject `tools` into `StartConversation`, handles `ToolInvoke` messages, and sends `ToolResult` back
 - SDK v0.2.2 has no native tool calling support; we access private `FlowClient` internals via `as any` casts
-- `recall_memories` tool calls `recallMemories` server action via dynamic import
+- `recall_memories` tool calls `recallMemoriesStructured` server action via dynamic import (returns both text for Flow + structured memory data for admin panel)
 
 ## Memory (Backboard.io)
 - `app/lib/backboard.ts` — `BackboardClient` class wrapping REST API (`https://app.backboard.io/api`), pure fetch, no external deps
@@ -25,7 +25,10 @@
   - `createBackboardThread()` — creates thread, stores thread_id server-side, returns it to client
   - `mirrorTurnToBackboard()` — sends user + agent text with `memory=Auto` (Backboard extracts memories)
   - `recallMemories(query)` — primary: `sendMessage` with `memory=Readonly` on session thread; uses `retrieved_memories` from response (Backboard's vector search with relevance scores, deduplicated); fallback: `GET /memories` dump
-- `app/hooks/useConversationMirror.ts` — client hook that detects completed turn pairs and fires mirror calls
+  - `recallMemoriesStructured(query)` — returns `{text, memories[]}` for admin panel display
+  - `getBackboardSessionInfo()` — returns `{assistantId, threadId}` for admin panel
+  - `fetchAllMemories()` — returns all stored `BackboardMemory[]` for admin panel
+- `app/hooks/useConversationMirror.ts` — client hook that detects completed turn pairs and fires mirror calls; accepts optional `MirrorCallbacks` for status reporting
 - Assistant ID auto-created on first run, persisted to `.backboard-assistant-id` file (gitignored)
 - Auth: `X-API-Key` header with `BACKBOARD_API_KEY` env var
 
@@ -40,3 +43,12 @@
 - Audio worklet copied to `public/pcm-audio-worklet.min.js`
 - Mic audio: Float32 → Int16 (PCM S16LE) → WebSocket → Flow agent
 - Agent audio: Int16 (PCM S16LE) via WebSocket → browser playback
+
+## Admin Debug Panel
+- `app/contexts/AdminDebugContext.tsx` — React context shared between VoiceAgent (producer) and AdminPanel (consumer)
+- `app/types/admin-debug.ts` — shared types: `MirrorLogEntry`, `ToolCallEntry`, `RecallEntry`, `SessionInfo`
+- `app/components/SplitLayout.tsx` — fixed 50/50 flexbox layout
+- `app/components/admin/AdminPanel.tsx` — root admin panel (SessionInfo + LiveFeed)
+- `app/components/admin/SessionInfo.tsx` — session IDs, timer, memory list, recall results
+- `app/components/admin/LiveFeed.tsx` — mirror log + tool call log with status badges
+- Memory refresh: on session start + ~1.5s after each successful mirror (no polling timers)

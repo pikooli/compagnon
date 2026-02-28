@@ -20,8 +20,8 @@
 
 # Memory (Backboard.io)
 - `app/lib/backboard.ts` — REST wrapper for Backboard API (no external SDK, pure fetch)
-- `app/actions/backboard.ts` — server actions: createBackboardThread, mirrorTurnToBackboard, recallMemories
-- `app/hooks/useConversationMirror.ts` — auto-mirrors conversation turns to Backboard (fire-and-forget)
+- `app/actions/backboard.ts` — server actions: createBackboardThread, mirrorTurnToBackboard, recallMemories, recallMemoriesStructured, getBackboardSessionInfo, fetchAllMemories
+- `app/hooks/useConversationMirror.ts` — auto-mirrors conversation turns to Backboard (fire-and-forget); accepts `MirrorCallbacks` for admin panel status reporting
 - **Mirroring** (`memory=Auto`): every turn sent to Backboard in background; Backboard extracts + stores memories
 - **Recall** (`memory=Readonly`): Flow passes user's query via tool; Backboard's vector search returns scored memories from `retrieved_memories` field (deduplicated); Flow's LLM presents them
 - Fallback: if no thread available, falls back to `GET /memories` (dump all)
@@ -29,6 +29,16 @@
 - Backboard failures never break the voice conversation — all errors are caught and logged
 - Env vars: `BACKBOARD_API_KEY` (required)
 - Assistant ID auto-persisted to `.backboard-assistant-id` file (gitignored, created on first run)
+
+# Admin Debug Panel
+- 50/50 split layout: voice agent (left), admin panel (right). Always visible.
+- `app/contexts/AdminDebugContext.tsx` — React context shared between VoiceAgent (data producer) and AdminPanel (data consumer)
+- `app/types/admin-debug.ts` — shared types: MirrorLogEntry, ToolCallEntry, RecallEntry, SessionInfo
+- `app/components/SplitLayout.tsx` — fixed 50/50 flexbox split
+- `app/components/admin/AdminPanel.tsx` — root admin container
+- `app/components/admin/SessionInfo.tsx` — session IDs, timer, stored memories, recall results
+- `app/components/admin/LiveFeed.tsx` — mirror log + tool call log with status badges
+- Memory data refreshed on session start and after each mirrored turn (no polling)
 
 # Important
 

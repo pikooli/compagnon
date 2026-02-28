@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   useFlow,
   useFlowEventListener,
@@ -14,9 +14,15 @@ import {
 } from "@speechmatics/browser-audio-input-react";
 import { usePCMAudioPlayerContext } from "@speechmatics/web-pcm-player-react";
 import { getJWT } from "@/app/actions/auth";
+import { getBackboardSessionInfo } from "@/app/actions/backboard";
 import { useFlowToolCalling } from "@/app/hooks/useFlowToolCalling";
-import { useConversationMirror } from "@/app/hooks/useConversationMirror";
+import {
+  useConversationMirror,
+  type MirrorCallbacks,
+} from "@/app/hooks/useConversationMirror";
 import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
+import { useAdminDebug } from "@/app/contexts/AdminDebugContext";
+import type { ToolCallingCallbacks } from "@/app/hooks/useFlowToolCalling";
 
 const AGENT_ID = "1d9e7010-5c07-40d4-8088-42a5a0bc5645:latest";
 
@@ -29,6 +35,8 @@ function float32ToInt16(float32: Float32Array): Int16Array {
   return int16;
 }
 
+let recallIdCounter = 0;
+
 export function VoiceAgent() {
   const [isActive, setIsActive] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
@@ -37,7 +45,6 @@ export function VoiceAgent() {
   >([]);
   const [userPartialText, setUserPartialText] = useState<string>("");
   const [error, setError] = useState<string>("");
-  const [debugLog, setDebugLog] = useState<string[]>([]);
 
   const { startConversation, endConversation, sendAudio, socketState } =
     useFlow();
@@ -45,10 +52,68 @@ export function VoiceAgent() {
   const { startRecording, stopRecording, isRecording, audioContext: recorderAudioContext } =
     usePCMAudioRecorderContext();
   const { playAudio, audioContext: playerAudioContext } = usePCMAudioPlayerContext();
-  const { activeToolCall, handleToolInvoke } = useFlowToolCalling();
+
+  const {
+    setSession,
+    addMirrorEntry,
+    updateMirrorEntry,
+    addToolCall,
+    updateToolCall,
+    addRecallResult,
+    resetSession,
+  } = useAdminDebug();
+
+  // Mirror callbacks for admin panel
+  const mirrorCallbacks: MirrorCallbacks = useMemo(
+    () => ({
+      onThreadCreated: (threadId) => {
+        setSession({ threadId });
+      },
+      onMirrorStart: (id, userText, agentText) => {
+        addMirrorEntry({
+          id,
+          userText,
+          agentText,
+          status: "pending",
+          timestamp: Date.now(),
+        });
+      },
+      onMirrorComplete: (id) => {
+        updateMirrorEntry(id, { status: "sent" });
+      },
+      onMirrorFail: (id, error) => {
+        updateMirrorEntry(id, { status: "failed", error });
+      },
+    }),
+    [setSession, addMirrorEntry, updateMirrorEntry],
+  );
+
+  // Tool calling callbacks for admin panel
+  const toolCallbacks: ToolCallingCallbacks = useMemo(
+    () => ({
+      onToolCallStart: (entry) => {
+        addToolCall(entry);
+      },
+      onToolCallEnd: (id, update) => {
+        updateToolCall(id, update);
+      },
+      onRecallResult: (query, memories) => {
+        addRecallResult({
+          id: `recall-${++recallIdCounter}`,
+          query,
+          memories,
+          timestamp: Date.now(),
+        });
+      },
+    }),
+    [addToolCall, updateToolCall, addRecallResult],
+  );
+
+  const { activeToolCall, handleToolInvoke } =
+    useFlowToolCalling(toolCallbacks);
 
   // Mirror conversation turns to Backboard for memory extraction
-  useConversationMirror(messages, isActive);
+  useConversationMirror(messages, isActive, mirrorCallbacks);
 
   // Use ref so the audio listener always sees latest value without re-registering
   const isActiveRef = useRef(false);
@@ -84,12 +149,6 @@ export function VoiceAgent() {
     "message",
     useCallback((ev: FlowIncomingMessageEvent) => {
       const msg = ev.data;
-
-      // Debug: log every message type
-      setDebugLog((prev) => [
-        ...prev.slice(-19),
-        `${msg.message}: ${JSON.stringify(msg).slice(0, 120)}`,
-      ]);
 
       switch (msg.message) {
         case "ResponseStarted":
@@ -146,6 +205,7 @@ export function VoiceAgent() {
       setError("");
       setMessages([]);
       setUserPartialText("");
+      resetSession();
 
       // Resume AudioContexts (browsers suspend them until user gesture)
       await Promise.all([
@@ -168,6 +228,12 @@ export function VoiceAgent() {
       });
 
       setIsActive(true);
+      setSession({ startedAt: Date.now() });
+
+      // Fetch session info (assistant ID) from server
+      getBackboardSessionInfo().then((info) => {
+        setSession({ assistantId: info.assistantId });
+      });
 
       await startRecording({
         deviceId: selectedDeviceId || undefined,
@@ -187,7 +253,7 @@ export function VoiceAgent() {
     audioDevices.permissionState === "granted" ? audioDevices.deviceList : [];
 
   return (
-    <div className="mx-auto max-w-[700px] p-8 text-foreground">
+    <div className="p-8 text-foreground">
       <h1 className="mb-6 text-3xl font-bold">Voice Agent</h1>
 
       {/* Mic selector */}
@@ -286,15 +352,6 @@ export function VoiceAgent() {
         <div className="mb-3 rounded-lg bg-foreground/10 p-4">
           <strong className="text-base">You:</strong>
           <p className="mt-2 text-lg text-foreground/50">{userPartialText}</p>
-        </div>
-      )}
-      {/* Debug log */}
-      {debugLog.length > 0 && (
-        <div className="mt-8 rounded-lg bg-foreground/5 p-4">
-          <strong className="text-sm">Debug (messages received):</strong>
-          <pre className="mt-2 max-h-60 overflow-auto text-xs text-foreground/60">
-            {debugLog.join("\n")}
-          </pre>
         </div>
       )}
     </div>

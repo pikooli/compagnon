@@ -4,10 +4,11 @@ import { useContext, useCallback, useEffect, useRef, useState } from "react";
 import { FlowContext } from "@speechmatics/flow-client-react";
 import {
   TOOLS,
-  executeToolCall,
   type ToolInvokeMessage,
   type ToolResultMessage,
 } from "@/app/lib/flow-tools";
+import type { ToolCallEntry } from "@/app/types/admin-debug";
+import type { RetrievedMemory } from "@/app/lib/backboard";
 
 export type ToolCallStatus = {
   id: string;
@@ -16,11 +17,18 @@ export type ToolCallStatus = {
   result?: string;
 };
 
-export function useFlowToolCalling() {
+export interface ToolCallingCallbacks {
+  onToolCallStart?: (entry: ToolCallEntry) => void;
+  onToolCallEnd?: (id: string, update: Partial<ToolCallEntry>) => void;
+  onRecallResult?: (query: string, memories: RetrievedMemory[]) => void;
+}
+
+export function useFlowToolCalling(callbacks?: ToolCallingCallbacks) {
   const context = useContext(FlowContext);
   const [activeToolCall, setActiveToolCall] = useState<ToolCallStatus | null>(
     null,
   );
+  const [toolCallHistory, setToolCallHistory] = useState<ToolCallEntry[]>([]);
   const patchedWsRef = useRef<WebSocket | null>(null);
 
   // Patch WebSocket.send to inject `tools` into the StartConversation message.
@@ -70,18 +78,95 @@ export function useFlowToolCalling() {
       if (!context) return;
       const { client } = context;
       const { id, function: fn } = invokeMsg;
+      const startTime = Date.now();
 
       setActiveToolCall({ id, toolName: fn.name, state: "executing" });
 
+      const entry: ToolCallEntry = {
+        id,
+        toolName: fn.name,
+        args: fn.arguments,
+        status: "executing",
+        startTime,
+      };
+      setToolCallHistory((prev) => [...prev, entry]);
+      callbacks?.onToolCallStart?.(entry);
+
       let toolResult: ToolResultMessage;
       try {
-        const result = await executeToolCall(fn.name, fn.arguments);
-        toolResult = { message: "ToolResult", id, status: "ok", content: result };
-        setActiveToolCall({ id, toolName: fn.name, state: "completed", result });
+        // Use structured recall for recall_memories to get both text and memory data
+        let result: string;
+        if (fn.name === "recall_memories") {
+          const { recallMemoriesStructured } = await import(
+            "@/app/actions/backboard"
+          );
+          const structured = await recallMemoriesStructured(
+            (fn.arguments.query as string) ?? "",
+          );
+          result = structured.text;
+          callbacks?.onRecallResult?.(
+            (fn.arguments.query as string) ?? "",
+            structured.memories,
+          );
+        } else {
+          const { executeToolCall } = await import("@/app/lib/flow-tools");
+          result = await executeToolCall(fn.name, fn.arguments);
+        }
+
+        toolResult = {
+          message: "ToolResult",
+          id,
+          status: "ok",
+          content: result,
+        };
+        setActiveToolCall({
+          id,
+          toolName: fn.name,
+          state: "completed",
+          result,
+        });
+
+        const endTime = Date.now();
+        setToolCallHistory((prev) =>
+          prev.map((e) =>
+            e.id === id
+              ? { ...e, status: "completed" as const, result, endTime }
+              : e,
+          ),
+        );
+        callbacks?.onToolCallEnd?.(id, {
+          status: "completed",
+          result,
+          endTime,
+        });
       } catch (err) {
         const content = err instanceof Error ? err.message : String(err);
-        toolResult = { message: "ToolResult", id, status: "failed", content };
-        setActiveToolCall({ id, toolName: fn.name, state: "failed", result: content });
+        toolResult = {
+          message: "ToolResult",
+          id,
+          status: "failed",
+          content,
+        };
+        setActiveToolCall({
+          id,
+          toolName: fn.name,
+          state: "failed",
+          result: content,
+        });
+
+        const endTime = Date.now();
+        setToolCallHistory((prev) =>
+          prev.map((e) =>
+            e.id === id
+              ? { ...e, status: "failed" as const, result: content, endTime }
+              : e,
+          ),
+        );
+        callbacks?.onToolCallEnd?.(id, {
+          status: "failed",
+          result: content,
+          endTime,
+        });
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,8 +175,8 @@ export function useFlowToolCalling() {
       // Auto-clear after 3 s
       setTimeout(() => setActiveToolCall(null), 3000);
     },
-    [context],
+    [context, callbacks],
   );
 
-  return { activeToolCall, handleToolInvoke };
+  return { activeToolCall, toolCallHistory, handleToolInvoke };
 }

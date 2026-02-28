@@ -112,9 +112,15 @@ export class BackboardClient {
   }
 
   async listMemories(assistantId: string): Promise<BackboardMemory[]> {
-    return this.request<BackboardMemory[]>(
+    // API may return a bare array or an object like { memories: [...] }
+    const raw = await this.request<BackboardMemory[] | { memories: BackboardMemory[] }>(
       "GET",
       `/assistants/${assistantId}/memories`,
     );
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray((raw as { memories: BackboardMemory[] }).memories)) {
+      return (raw as { memories: BackboardMemory[] }).memories;
+    }
+    return [];
   }
 }

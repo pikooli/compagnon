@@ -30,3 +30,14 @@
 - **Recall**: `recall_memories` tool sends the user's query to Backboard with `memory=Readonly`. Backboard's vector search finds relevant scored memories from its store. Flow's LLM incorporates these into its spoken response.
 - New Backboard thread per voice session; memories persist at assistant level across all threads
 - Graceful degradation: if Backboard is unavailable, voice conversation continues normally
+
+## Admin Debug Panel
+
+- Fixed 50/50 split layout: voice agent (left), admin panel (right)
+- Always visible (hackathon demo mode)
+- **Session Info**: thread ID, assistant ID, session duration timer
+- **Stored Memories**: full memory bank from Backboard, refreshed after each mirrored turn
+- **Recall Results**: when `recall_memories` fires — shows query, returned memories with relevance scores
+- **Mirror Log**: each conversation turn pair sent to Backboard, with pending/sent/failed status
+- **Tool Call Log**: each tool invocation with arguments, result, duration, and status
+- Shared state via React Context (`AdminDebugContext`) — VoiceAgent pushes data, AdminPanel reads

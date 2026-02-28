@@ -11,6 +11,15 @@ interface Message {
   text: string;
 }
 
+export interface MirrorCallbacks {
+  onThreadCreated?: (threadId: string) => void;
+  onMirrorStart?: (id: string, userText: string, agentText: string) => void;
+  onMirrorComplete?: (id: string) => void;
+  onMirrorFail?: (id: string, error: string) => void;
+}
+
+let mirrorIdCounter = 0;
+
 /**
  * Mirrors completed conversation turns to Backboard for memory extraction.
  *
@@ -19,7 +28,11 @@ interface Message {
  * - All Backboard calls are fire-and-forget — never block the voice pipeline
  * - Resets on conversation stop so the next session gets a fresh thread
  */
-export function useConversationMirror(messages: Message[], isActive: boolean) {
+export function useConversationMirror(
+  messages: Message[],
+  isActive: boolean,
+  callbacks?: MirrorCallbacks,
+) {
   const threadIdRef = useRef<string | null>(null);
   const mirroredCountRef = useRef(0);
   const creatingThreadRef = useRef(false);
@@ -31,6 +44,7 @@ export function useConversationMirror(messages: Message[], isActive: boolean) {
       createBackboardThread().then((id) => {
         threadIdRef.current = id;
         creatingThreadRef.current = false;
+        if (id) callbacks?.onThreadCreated?.(id);
       });
     }
 
@@ -39,7 +53,7 @@ export function useConversationMirror(messages: Message[], isActive: boolean) {
       mirroredCountRef.current = 0;
       creatingThreadRef.current = false;
     }
-  }, [isActive]);
+  }, [isActive, callbacks]);
 
   // Mirror completed turn pairs
   useEffect(() => {
@@ -58,9 +72,19 @@ export function useConversationMirror(messages: Message[], isActive: boolean) {
         const threadId = threadIdRef.current;
         const userText = first.text;
         const agentText = second.text;
+        const mirrorId = `mirror-${++mirrorIdCounter}`;
 
-        // Fire-and-forget
-        mirrorTurnToBackboard(threadId, userText, agentText);
+        callbacks?.onMirrorStart?.(mirrorId, userText, agentText);
+
+        // Fire-and-forget with status reporting
+        mirrorTurnToBackboard(threadId, userText, agentText)
+          .then(() => callbacks?.onMirrorComplete?.(mirrorId))
+          .catch((err) =>
+            callbacks?.onMirrorFail?.(
+              mirrorId,
+              err instanceof Error ? err.message : String(err),
+            ),
+          );
         idx += 2;
       } else {
         // Skip non-pair messages (e.g. consecutive user or agent messages)
@@ -69,5 +93,5 @@ export function useConversationMirror(messages: Message[], isActive: boolean) {
     }
 
     mirroredCountRef.current = idx;
-  }, [messages]);
+  }, [messages, callbacks]);
 }
