@@ -83,6 +83,7 @@ export async function executeToolCall(
           message,
           threadId: context?.threadId,
           assistantId: context?.assistantId,
+          // timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 
