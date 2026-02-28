@@ -39,36 +39,41 @@ export interface ToolResultMessage {
 }
 
 // --- Tool registry ---
-// TEMPORARY: get_data is a hardcoded testing tool. It will be replaced with
-// real data-fetching tools in a future version.
 
 export const TOOLS: FlowToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "get_data",
+      name: "recall_memories",
       description:
-        "Retrieves the user's schedule or reminders for today. Call this when the user asks about their plans, schedule, reminders, or what they need to do.",
+        "Retrieves stored memories about the user from previous conversations. Call this when the user asks if you remember something, references past conversations, or when you need personal context (family members, preferences, routines, past events) to give a better answer. Pass the user's question or topic as the query so the memory system can find the most relevant memories.",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "The user's question or topic to recall memories about, e.g. 'my grandson' or 'what I like to eat'",
+          },
+        },
+        required: ["query"],
       },
     },
   },
 ];
 
 // --- Tool executor ---
-// TEMPORARY: hardcoded responses with fake delay for testing. Will be replaced.
 
 export async function executeToolCall(
   name: string,
-  _args: Record<string, unknown>,
+  args: Record<string, unknown>,
 ): Promise<string> {
+  // Dynamic import to keep server action out of the client bundle
+  const { recallMemories } = await import("@/app/actions/backboard");
+
   switch (name) {
-    case "get_data":
-      // TEMPORARY: simulate 3s processing with hardcoded response
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      return "Today you need to go fishing with your son at 2pm. Don't forget to bring the red tackle box.";
+    case "recall_memories":
+      return recallMemories((args.query as string) ?? "");
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

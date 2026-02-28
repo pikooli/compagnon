@@ -5,12 +5,30 @@
 - Next.js 16 (App Router, latest as of 2026-02-28)
 - UI: shadcn/ui
 - Voice: Speechmatics Flow (`@speechmatics/flow-client-react` + companion packages)
+- Memory: Backboard.io (persistent memory + vector-search recall)
 - Target audience: elderly people — prioritize large text, simple navigation, high contrast, minimal cognitive load
+
+# Architecture Philosophy
+- **Flow = minimal voice brain** — handles STT, TTS, and lightweight conversational LLM. It should not carry heavy logic.
+- **Backboard = secondary backend** — handles memory storage, recall intelligence, and any heavy LLM reasoning. It receives the full conversation via mirroring.
+- Flow delegates to Backboard via tools whenever it needs context beyond the current conversation.
 
 # Tool Calling
 - `app/hooks/useFlowToolCalling.ts` patches WebSocket to work around SDK v0.2.2 lacking tool support
 - When SDK is updated with native tool calling, refactor to remove the WS patching
-- TEMPORARY: `get_data` in `app/lib/flow-tools.ts` is a hardcoded test tool — will be replaced with a real implementation
+- `recall_memories` tool in `app/lib/flow-tools.ts` — calls Backboard to retrieve stored memories
+
+# Memory (Backboard.io)
+- `app/lib/backboard.ts` — REST wrapper for Backboard API (no external SDK, pure fetch)
+- `app/actions/backboard.ts` — server actions: createBackboardThread, mirrorTurnToBackboard, recallMemories
+- `app/hooks/useConversationMirror.ts` — auto-mirrors conversation turns to Backboard (fire-and-forget)
+- **Mirroring** (`memory=Auto`): every turn sent to Backboard in background; Backboard extracts + stores memories
+- **Recall** (`memory=Readonly`): Flow passes user's query via tool; Backboard's vector search returns scored memories from `retrieved_memories` field (deduplicated); Flow's LLM presents them
+- Fallback: if no thread available, falls back to `GET /memories` (dump all)
+- Memories persist at the assistant level; new thread created per voice session
+- Backboard failures never break the voice conversation — all errors are caught and logged
+- Env vars: `BACKBOARD_API_KEY` (required)
+- Assistant ID auto-persisted to `.backboard-assistant-id` file (gitignored, created on first run)
 
 # Important
 

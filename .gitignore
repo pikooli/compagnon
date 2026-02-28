@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Backboard assistant ID (auto-generated, local to each dev machine)
+.backboard-assistant-id
+
 # vercel
 .vercel
 

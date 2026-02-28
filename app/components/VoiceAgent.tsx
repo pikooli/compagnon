@@ -15,6 +15,7 @@ import {
 import { usePCMAudioPlayerContext } from "@speechmatics/web-pcm-player-react";
 import { getJWT } from "@/app/actions/auth";
 import { useFlowToolCalling } from "@/app/hooks/useFlowToolCalling";
+import { useConversationMirror } from "@/app/hooks/useConversationMirror";
 import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
 
 const AGENT_ID = "1d9e7010-5c07-40d4-8088-42a5a0bc5645:latest";
@@ -45,6 +46,9 @@ export function VoiceAgent() {
     usePCMAudioRecorderContext();
   const { playAudio, audioContext: playerAudioContext } = usePCMAudioPlayerContext();
   const { activeToolCall, handleToolInvoke } = useFlowToolCalling();
+
+  // Mirror conversation turns to Backboard for memory extraction
+  useConversationMirror(messages, isActive);
 
   // Use ref so the audio listener always sees latest value without re-registering
   const isActiveRef = useRef(false);
@@ -236,13 +240,13 @@ export function VoiceAgent() {
           }`}
         >
           {activeToolCall.state === "executing" && (
-            <span>Looking up your information...</span>
+            <span>Checking my memory...</span>
           )}
           {activeToolCall.state === "completed" && (
-            <span>Found your information!</span>
+            <span>Got it!</span>
           )}
           {activeToolCall.state === "failed" && (
-            <span>Could not look up information.</span>
+            <span>Could not access memories right now.</span>
           )}
         </div>
       )}
