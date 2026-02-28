@@ -3,7 +3,7 @@ import { readFile, writeFile, unlink } from "fs/promises";
 import { join } from "path";
 
 const TOKEN_PATH = join(process.cwd(), ".google-calendar-tokens.json");
-const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
+const SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
 
 export interface CalendarEvent {
   id: string;
@@ -126,7 +126,7 @@ export async function listCalendarEvents(options?: {
   oauth2Client.on("tokens", async (newTokens) => {
     try {
       const existing = (await loadTokens()) ?? {};
-      await saveTokens({ ...existing, ...newTokens });
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
       console.log("[GoogleCalendar] Tokens auto-refreshed and saved");
     } catch (err) {
       console.error("[GoogleCalendar] Failed to save refreshed tokens:", err);
@@ -154,4 +154,135 @@ export async function listCalendarEvents(options?: {
     end: e.end?.dateTime ?? e.end?.date ?? "",
     allDay: !e.start?.dateTime,
   }));
+}
+
+export async function createCalendarEvent(event: {
+  summary: string;
+  startISO: string;
+  endISO: string;
+  description?: string;
+  location?: string;
+  timeZone?: string;
+}): Promise<CalendarEvent> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) {
+    throw new Error("Google Calendar not connected");
+  }
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[GoogleCalendar] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const timeZone = event.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+
+  const res = await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: {
+      summary: event.summary,
+      description: event.description,
+      location: event.location,
+      start: { dateTime: event.startISO, timeZone },
+      end: { dateTime: event.endISO, timeZone },
+    },
+  });
+
+  const e = res.data;
+  return {
+    id: e.id ?? "",
+    summary: e.summary ?? "(no title)",
+    description: e.description ?? undefined,
+    location: e.location ?? undefined,
+    start: e.start?.dateTime ?? e.start?.date ?? "",
+    end: e.end?.dateTime ?? e.end?.date ?? "",
+    allDay: !e.start?.dateTime,
+  };
+}
+
+export async function deleteCalendarEvent(eventId: string): Promise<void> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) {
+    throw new Error("Google Calendar not connected");
+  }
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[GoogleCalendar] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+  await calendar.events.delete({ calendarId: "primary", eventId });
+  await calendar.events.delete({ calendarId: "primary", eventId });
+}
+
+export async function updateCalendarEvent(
+  eventId: string,
+  updates: {
+    summary?: string;
+    startISO?: string;
+    endISO?: string;
+    description?: string;
+    location?: string;
+    timeZone?: string;
+  },
+): Promise<CalendarEvent> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) {
+    throw new Error("Google Calendar not connected");
+  }
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[GoogleCalendar] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const timeZone = updates.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+
+  // Build only the fields that are being changed
+  const requestBody: Record<string, unknown> = {};
+  if (updates.summary !== undefined) requestBody.summary = updates.summary;
+  if (updates.description !== undefined) requestBody.description = updates.description;
+  if (updates.location !== undefined) requestBody.location = updates.location;
+  if (updates.startISO !== undefined) requestBody.start = { dateTime: updates.startISO, timeZone };
+  if (updates.endISO !== undefined) requestBody.end = { dateTime: updates.endISO, timeZone };
+
+  const res = await calendar.events.patch({
+    calendarId: "primary",
+    eventId,
+    requestBody,
+  });
+
+  const e = res.data;
+  return {
+    id: e.id ?? "",
+    summary: e.summary ?? "(no title)",
+    description: e.description ?? undefined,
+    location: e.location ?? undefined,
+    start: e.start?.dateTime ?? e.start?.date ?? "",
+    end: e.end?.dateTime ?? e.end?.date ?? "",
+    allDay: !e.start?.dateTime,
+  };
 }
