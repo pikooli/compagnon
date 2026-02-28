@@ -20,12 +20,19 @@
 
 # Workflow Phases
 
-## Planning
-1. Read current codebase state
-2. Research internet sources if needed
-3. Ask clarifying questions via the question tool
-4. Plan edits to SPECS.md, TECH.md, and CLAUDE.md if needed
-5. Once agreed, write the plan
+## Pre-Planning (before entering plan mode)
+1. **Read the code** — understand the current codebase state relevant to the request
+2. **Ask clarifying questions** — use the question tool to resolve ambiguities with the user
+3. **Research online** — look up docs, APIs, libraries, or examples to assess what's doable
+4. **Challenge the user** — push back on what is feasible, suggest alternatives, flag risks or trade-offs before committing to a direction
+
+Only after these steps are done, enter plan mode.
+
+## Planning (in plan mode)
+1. Do a more thorough codebase search and internet research
+2. Plan edits to SPECS.md, TECH.md, and CLAUDE.md if needed
+3. Write a detailed implementation plan
+4. Exit plan mode for user approval
 
 ## Working
 - Always create a new branch before coding
