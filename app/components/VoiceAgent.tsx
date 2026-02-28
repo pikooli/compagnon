@@ -60,6 +60,7 @@ export function VoiceAgent() {
   const [error, setError] = useState<string>("");
   const [sessionThreadId, setSessionThreadId] = useState<string | null>(null);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   const { startConversation, endConversation, sendAudio, socketState } =
     useFlow();
@@ -132,17 +133,17 @@ export function VoiceAgent() {
   // Mirror conversation turns to Backboard for memory extraction
   useConversationMirror(messages, isActive, mirrorCallbacks);
 
-  // Use ref so the audio listener always sees latest value without re-registering
+  // Use refs so audio listener always sees latest values without re-registering
   const isActiveRef = useRef(false);
-  useEffect(() => {
-    isActiveRef.current = isActive;
-  }, [isActive]);
+  const isMutedRef = useRef(false);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
 
-  // Send mic audio to Flow
+  // Send mic audio to Flow (skipped when muted)
   usePCMAudioListener(
     useCallback(
       (audio: Float32Array) => {
-        if (isActiveRef.current) {
+        if (isActiveRef.current && !isMutedRef.current) {
           sendAudio(float32ToInt16(audio).buffer);
         }
       },
@@ -321,6 +322,7 @@ export function VoiceAgent() {
     endConversation();
     setIsActive(false);
     setIsAgentSpeaking(false);
+    setIsMuted(false);
   };
 
   const deviceList =
@@ -400,19 +402,54 @@ export function VoiceAgent() {
             <div className="flex items-center gap-2.5">
               <div className={`h-2.5 w-2.5 rounded-full transition-colors ${
                 isActive
-                  ? isRecording
-                    ? "animate-pulse bg-green-500"
-                    : "bg-yellow-400"
+                  ? isMuted
+                    ? "bg-red-500"
+                    : isRecording
+                      ? "animate-pulse bg-green-500"
+                      : "bg-yellow-400"
                   : "bg-slate-300"
               }`} />
               <span className="text-sm font-medium text-slate-500">
                 {socketState === "connecting"
                   ? "Connecting…"
                   : isActive
-                    ? isRecording ? "Listening…" : "Processing…"
+                    ? isMuted
+                      ? "Muted"
+                      : isRecording ? "Listening…" : "Processing…"
                     : "Tap to start a conversation"}
               </span>
             </div>
+          )}
+
+          {/* Mute toggle — only visible during an active session */}
+          {isActive && (
+            <button
+              onClick={() => setIsMuted((m) => !m)}
+              className={`mt-3 flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                isMuted
+                  ? "border-red-500/40 bg-red-500/15 text-red-400 hover:bg-red-500/25"
+                  : "border-[#1e2d4a] bg-[#0f1c3f] text-slate-400 hover:text-white"
+              }`}
+              aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
+            >
+              {isMuted ? (
+                <>
+                  {/* mic-off icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+                  </svg>
+                  Unmute
+                </>
+              ) : (
+                <>
+                  {/* mic icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                  </svg>
+                  Mute
+                </>
+              )}
+            </button>
           )}
         </div>
 
