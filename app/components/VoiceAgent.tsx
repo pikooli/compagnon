@@ -62,7 +62,7 @@ export function VoiceAgent() {
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
-  const { startConversation, endConversation, sendAudio, socketState } =
+  const { startConversation, endConversation, sendAudio } =
     useFlow();
   const audioDevices = useAudioDevices();
   const { startRecording, stopRecording, isRecording, audioContext: recorderAudioContext } =
@@ -269,13 +269,15 @@ export function VoiceAgent() {
   };
 
   const handleStart = async () => {
-    try {
-      setError("");
-      setMessages([]);
-      setUserPartialText("");
-      setSessionThreadId(null);
-      resetSession();
+    setError("");
+    setMessages([]);
+    setUserPartialText("");
+    setSessionThreadId(null);
+    resetSession();
+    setIsActive(true);
+    setSession({ startedAt: Date.now() });
 
+    try {
       // Ensure the selected assistant is active on the server
       if (selectedAssistantId) {
         await setActiveAssistant(selectedAssistantId);
@@ -301,9 +303,6 @@ export function VoiceAgent() {
         },
       });
 
-      setIsActive(true);
-      setSession({ startedAt: Date.now() });
-
       // Fetch session info (assistant ID) from server
       getBackboardSessionInfo().then((info) => {
         setSession({ assistantId: info.assistantId });
@@ -313,6 +312,7 @@ export function VoiceAgent() {
         deviceId: selectedDeviceId || undefined,
       });
     } catch (err) {
+      setIsActive(false);
       setError(err instanceof Error ? err.message : String(err));
     }
   };
@@ -351,20 +351,17 @@ export function VoiceAgent() {
         <div className="mb-8 flex flex-col items-center">
           <div className="relative mb-5">
             {isActive && (
-              <div className="absolute -inset-4 animate-ping rounded-full bg-red-300/30" />
+              <div className="pointer-events-none absolute -inset-4 animate-ping rounded-full bg-red-300/30" />
             )}
             <button
               onClick={isActive ? handleStop : handleStart}
-              disabled={socketState === "connecting"}
-              className={`relative h-32 w-32 rounded-full font-semibold text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 ${
+              className={`relative h-32 w-32 rounded-full font-semibold text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 ${
                 isActive
                   ? "bg-gradient-to-b from-red-400 to-red-600"
                   : "bg-gradient-to-b from-blue-500 to-blue-700"
               }`}
             >
-              {socketState === "connecting" ? (
-                <span className="text-sm font-medium">Connecting…</span>
-              ) : isActive ? (
+              {isActive ? (
                 <div className="flex flex-col items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-8 w-8">
                     <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -410,13 +407,11 @@ export function VoiceAgent() {
                   : "bg-slate-300"
               }`} />
               <span className="text-sm font-medium text-slate-500">
-                {socketState === "connecting"
-                  ? "Connecting…"
-                  : isActive
-                    ? isMuted
-                      ? "Muted"
-                      : isRecording ? "Listening…" : "Processing…"
-                    : "Tap to start a conversation"}
+                {isActive
+                  ? isMuted
+                    ? "Muted"
+                    : isRecording ? "Listening…" : "Starting…"
+                  : "Tap to start a conversation"}
               </span>
             </div>
           )}
