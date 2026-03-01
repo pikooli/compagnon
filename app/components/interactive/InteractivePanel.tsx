@@ -3,7 +3,6 @@
 import { useUICommands } from "@/app/contexts/UICommandContext";
 import type { DisplayCalendarData, EmailData } from "@/app/types/ui-commands";
 import { AnimatePresence, motion } from "framer-motion";
-import { Monitor } from "lucide-react";
 import { CalendarDisplay } from "./CalendarDisplay";
 import { EmailDisplay } from "./EmailDisplay";
 
@@ -22,24 +21,6 @@ export function InteractivePanel() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <AnimatePresence mode="popLayout">
-          {commands.length === 0 && (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex h-full min-h-[200px] flex-col items-center justify-center text-center"
-            >
-              <Monitor className="mb-3 h-12 w-12 text-slate-600" />
-              <p className="text-lg text-slate-500">
-                Visual content will appear here
-              </p>
-              <p className="mt-1 text-base text-slate-600">
-                Ask about your calendar, and events will show up
-              </p>
-            </motion.div>
-          )}
-
           {commands.map((cmd) => {
             switch (cmd.type) {
               case "display_calendar":
