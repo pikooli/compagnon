@@ -3,6 +3,7 @@ import { createOAuth2Client, loadTokens, saveTokens, StoredTokens } from "./goog
 
 export async function listEmails(options?: {
   maxResults?: number;
+  query?: string;
 }): Promise<gmail_v1.Schema$Message[]> {
   const tokens = await loadTokens();
   if (!tokens?.access_token) {
@@ -28,6 +29,7 @@ export async function listEmails(options?: {
   const res = await gmail.users.messages.list({
     userId: "me",
     maxResults: options?.maxResults ?? 10,
+    q: options?.query,
   });
 
   return res.data.messages ?? [];
@@ -80,6 +82,28 @@ export async function sendEmail(email: {
   });
 
   return res.data;
+}
+
+export async function trashEmail(emailId: string): Promise<void> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) {
+    throw new Error("Google Gmail not connected");
+  }
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[GoogleGmail] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+  await gmail.users.messages.trash({ userId: "me", id: emailId });
 }
 
 function decode(data: string) {

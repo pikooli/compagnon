@@ -9,6 +9,7 @@ import {
   type ToolResultMessage,
 } from "@/app/lib/flow-tools";
 import type { ToolCallEntry } from "@/app/types/admin-debug";
+import type { CalendarEventData, EmailData, UICommand } from "@/app/types/ui-commands";
 
 export type ToolCallStatus = {
   id: string;
@@ -20,11 +21,16 @@ export type ToolCallStatus = {
 export interface ToolCallingCallbacks {
   onToolCallStart?: (entry: ToolCallEntry) => void;
   onToolCallEnd?: (id: string, update: Partial<ToolCallEntry>) => void;
+  onUICommands?: (commands: UICommand[]) => void;
 }
 
 export interface ToolCallingContext {
   threadId?: string | null;
   assistantId?: string | null;
+  displayedEvents?: CalendarEventData[];
+  displayedEmails?: EmailData[];
+  focusedEventId?: string | null;
+  focusedEmailId?: string | null;
 }
 
 export function useFlowToolCalling(
@@ -111,6 +117,7 @@ export function useFlowToolCalling(
           fn.name,
           fn.arguments,
           sessionContextRef.current ?? undefined,
+          callbacks?.onUICommands,
         );
 
         toolResult = {

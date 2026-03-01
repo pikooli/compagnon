@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/backboard";
 import { GoogleCalendarConnect } from "@/app/components/GoogleCalendarConnect";
 import { useAdminDebug } from "@/app/contexts/AdminDebugContext";
+import { useUICommands } from "@/app/contexts/UICommandContext";
 import {
   useConversationMirror,
   type MirrorCallbacks,
@@ -21,6 +22,7 @@ import {
 } from "@/app/hooks/useFlowToolCalling";
 import type { BackboardAssistant } from "@/app/lib/backboard";
 import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
+import type { CalendarEventData, DisplayCalendarCommand, DisplayEmailsCommand, EmailData } from "@/app/types/ui-commands";
 import {
   useAudioDevices,
   usePCMAudioListener,
@@ -82,6 +84,8 @@ export function VoiceAgent() {
     resetSession,
   } = useAdminDebug();
 
+  const { pushCommands, clearCommands, commands: uiCommands, focusedEventId, focusedEmailId } = useUICommands();
+
   // Mirror callbacks for admin panel
   const mirrorCallbacks: MirrorCallbacks = useMemo(
     () => ({
@@ -108,7 +112,7 @@ export function VoiceAgent() {
     [setSession, addMirrorEntry, updateMirrorEntry],
   );
 
-  // Tool calling callbacks for admin panel
+  // Tool calling callbacks for admin panel + UI commands
   const toolCallbacks: ToolCallingCallbacks = useMemo(
     () => ({
       onToolCallStart: (entry) => {
@@ -117,17 +121,42 @@ export function VoiceAgent() {
       onToolCallEnd: (id, update) => {
         updateToolCall(id, update);
       },
+      onUICommands: pushCommands,
     }),
-    [addToolCall, updateToolCall],
+    [addToolCall, updateToolCall, pushCommands],
   );
+
+  // Extract displayed events from the last display_calendar command
+  const displayedEvents: CalendarEventData[] | undefined = useMemo(() => {
+    for (let i = uiCommands.length - 1; i >= 0; i--) {
+      if (uiCommands[i].type === "display_calendar") {
+        return (uiCommands[i] as DisplayCalendarCommand).data.events;
+      }
+    }
+    return undefined;
+  }, [uiCommands]);
+
+  // Extract displayed emails from the last display_emails command
+  const displayedEmails: EmailData[] | undefined = useMemo(() => {
+    for (let i = uiCommands.length - 1; i >= 0; i--) {
+      if (uiCommands[i].type === "display_emails") {
+        return (uiCommands[i] as DisplayEmailsCommand).data.emails;
+      }
+    }
+    return undefined;
+  }, [uiCommands]);
 
   // Session context for brain API calls
   const sessionContext: ToolCallingContext = useMemo(
     () => ({
       threadId: sessionThreadId,
       assistantId: selectedAssistantId || undefined,
+      displayedEvents,
+      displayedEmails,
+      focusedEventId,
+      focusedEmailId,
     }),
-    [sessionThreadId, selectedAssistantId],
+    [sessionThreadId, selectedAssistantId, displayedEvents, displayedEmails, focusedEventId, focusedEmailId],
   );
 
   const { activeToolCall, handleToolInvoke } =
@@ -282,6 +311,7 @@ export function VoiceAgent() {
       setUserPartialText("");
       setSessionThreadId(null);
       resetSession();
+      clearCommands();
 
       // Ensure the selected assistant is active on the server
       if (selectedAssistantId) {
