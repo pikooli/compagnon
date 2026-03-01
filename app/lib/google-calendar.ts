@@ -3,7 +3,15 @@ import { google } from "googleapis";
 import { join } from "path";
 
 const TOKEN_PATH = join(process.cwd(), ".google-calendar-tokens.json");
-const SCOPES = ["https://www.googleapis.com/auth/calendar.events",
+  
+const SCOPES = [
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/documents",
+  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/spreadsheets",
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.send"
 ];
 
@@ -229,6 +237,95 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
 
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
   await calendar.events.delete({ calendarId: "primary", eventId });
+}
+
+// --- Google Drive ---
+
+export async function listDriveFiles(name: string): Promise<{ id: string; name: string }[]> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) throw new Error("Google not connected");
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[Google] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const drive = google.drive({ version: "v3", auth: oauth2Client });
+  const res = await drive.files.list({
+    q: `name contains '${name.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.document' and trashed=false`,
+    fields: "files(id, name)",
+    pageSize: 10,
+  });
+
+  return (res.data.files ?? []).map((f) => ({ id: f.id ?? "", name: f.name ?? "" }));
+}
+
+// --- Google Docs ---
+
+export async function readGoogleDoc(documentId: string): Promise<string> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) throw new Error("Google not connected");
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[Google] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const docs = google.docs({ version: "v1", auth: oauth2Client });
+  const res = await docs.documents.get({ documentId });
+
+  const content = res.data.body?.content ?? [];
+  return content
+    .flatMap((el) =>
+      el.paragraph
+        ? (el.paragraph.elements ?? []).map((pe) => pe.textRun?.content ?? "")
+        : [],
+    )
+    .join("");
+}
+
+export async function createGoogleDoc(
+  title: string,
+  content?: string,
+): Promise<{ id: string; url: string }> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) throw new Error("Google not connected");
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[Google] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const docs = google.docs({ version: "v1", auth: oauth2Client });
+  const res = await docs.documents.create({ requestBody: { title } });
+  const docId = res.data.documentId ?? "";
+
+  if (content && docId) {
+    await docs.documents.batchUpdate({
+      documentId: docId,
+      requestBody: { requests: [{ insertText: { location: { index: 1 }, text: content } }] },
+    });
+  }
+
+  return { id: docId, url: `https://docs.google.com/document/d/${docId}/edit` };
 }
 
 export async function updateCalendarEvent(
