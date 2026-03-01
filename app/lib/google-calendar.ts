@@ -3,7 +3,9 @@ import { google } from "googleapis";
 import { join } from "path";
 
 const TOKEN_PATH = join(process.cwd(), ".google-calendar-tokens.json");
-const SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
+const SCOPES = ["https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/gmail.send"
+];
 
 export interface CalendarEvent {
   id: string;
@@ -15,14 +17,14 @@ export interface CalendarEvent {
   allDay: boolean;
 }
 
-function getRedirectUri(): string {
+export function getRedirectUri(): string {
   return (
     process.env.GOOGLE_REDIRECT_URI ??
     `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/api/google-calendar/callback`
   );
 }
 
-function createOAuth2Client() {
+export function createOAuth2Client() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
@@ -33,7 +35,7 @@ function createOAuth2Client() {
 
 // --- Token persistence ---
 
-interface StoredTokens {
+export interface StoredTokens {
   access_token?: string;
   refresh_token?: string;
   expiry_date?: number;
@@ -45,7 +47,7 @@ interface StoredTokens {
  * Load tokens from file, falling back to env vars if no file exists yet.
  * This lets you bootstrap from GOOGLE_ACCESS_TOKEN / GOOGLE_REFRESH_TOKEN in .env.
  */
-async function loadTokens(): Promise<StoredTokens | null> {
+export async function loadTokens(): Promise<StoredTokens | null> {
   // Try file first
   try {
     const raw = await readFile(TOKEN_PATH, "utf-8");
@@ -73,13 +75,13 @@ async function loadTokens(): Promise<StoredTokens | null> {
   return null;
 }
 
-async function saveTokens(tokens: StoredTokens): Promise<void> {
+export async function saveTokens(tokens: StoredTokens): Promise<void> {
   await writeFile(TOKEN_PATH, JSON.stringify(tokens, null, 2), "utf-8");
 }
 
 // --- Public API ---
 
-export function getAuthUrl(): string {
+export function getCalendarAuthUrl(): string {
   const oauth2Client = createOAuth2Client();
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
