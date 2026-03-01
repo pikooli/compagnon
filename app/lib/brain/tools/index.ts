@@ -9,6 +9,7 @@ import { createDocTool, readDocTool, readSpreadsheetTool } from "./google/docs";
 import { createGetEmailsTool, createFocusEmailTool, createUnfocusEmailTool, createTrashEmailTool, createSendEmailTool } from './google/gmail';
 import { tools as productTools } from "./product";
 import { createSaveRuleTool, createRemoveRuleTool, createListRulesTool } from "./rules";
+import { createShowUITool } from "./show-ui";
 
 export interface BrainContext {
   threadId?: string | null;
@@ -67,5 +68,5 @@ export function createBrainTools(ctx: BrainContext) {
     },
   );
 
-  return [recallMemories, createGetCalendarEventsTool(ctx), createCreateCalendarEventTool(ctx), createUpdateCalendarEventTool(ctx), createDeleteCalendarEventTool(ctx), createFocusCalendarEventTool(ctx), createUnfocusCalendarEventTool(ctx), createGetEmailsTool(ctx), createFocusEmailTool(ctx), createUnfocusEmailTool(ctx), createTrashEmailTool(ctx), createSendEmailTool(ctx), readDocTool, createDocTool, readSpreadsheetTool, ...contactTools, ...productTools, createSaveRuleTool(ctx), createRemoveRuleTool(ctx), createListRulesTool(ctx)];
+  return [recallMemories, createGetCalendarEventsTool(ctx), createCreateCalendarEventTool(ctx), createUpdateCalendarEventTool(ctx), createDeleteCalendarEventTool(ctx), createFocusCalendarEventTool(ctx), createUnfocusCalendarEventTool(ctx), createGetEmailsTool(ctx), createFocusEmailTool(ctx), createUnfocusEmailTool(ctx), createTrashEmailTool(ctx), createSendEmailTool(ctx), readDocTool, createDocTool, readSpreadsheetTool, ...contactTools, ...productTools, createSaveRuleTool(ctx), createRemoveRuleTool(ctx), createListRulesTool(ctx), createShowUITool(ctx)];
 }

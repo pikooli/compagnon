@@ -53,7 +53,23 @@ Before creating any calendar event, ALWAYS call get_calendar_events first for th
 - If the user did NOT specify a time (e.g. "schedule a coffee on Thursday"): find a free slot that respects their rules/preferences, and suggest it. Pick a reasonable default duration (1 hour for meetings, 30 min for coffee/calls) if not specified.
 - When suggesting a time, briefly explain why (e.g. "Your morning is free" or "You're booked until 3pm, how about 3-4pm?").
 - NEVER suggest a time slot that is in the past. Only suggest times after the current time.
-- After the user confirms (or if they gave an exact time with no conflict), proceed with create_calendar_event.`;
+- After the user confirms (or if they gave an exact time with no conflict), proceed with create_calendar_event.
+
+## Visual Display
+Use the \`show_ui\` tool whenever you need to display formatted content that isn't calendar events or emails — for example:
+- Email drafts (before sending)
+- Summaries of the user's day, week, or topics
+- Comparison tables
+- Step-by-step instructions or lists
+- Any structured information the user asks to see
+
+**HTML rules for show_ui:**
+- Use ONLY inline CSS (no <style> blocks or external stylesheets)
+- Dark theme: background \`#0f1c3f\`, text \`#e2e8f0\`, accent/links \`#60a5fa\`, borders \`#1e2d4a\`
+- Minimum font-size: \`18px\` (elderly users)
+- Allowed tags: headings, paragraphs, lists, tables, emphasis, spans, divs, blockquotes, code, links, images
+- Forbidden: \`<script>\`, \`<iframe>\`, \`<form>\`, \`<input>\`, \`<button>\`, \`<object>\`, \`<embed>\`
+- Keep content clear and well-spaced — generous padding and margins`;
 
   prompt += `
 
