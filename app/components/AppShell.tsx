@@ -20,6 +20,10 @@ export function AppShell() {
     handleStart,
     handleStop,
     handleMute,
+    selectedVoiceAgentId,
+    setSelectedVoiceAgentId,
+    maleAgentId,
+    femaleAgentId,
   } = useVoiceSession();
 
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -48,7 +52,10 @@ export function AppShell() {
           >
             <LandingScreen
               onStart={handleStart}
-              isConnecting={socketState === "connecting"}
+              selectedVoiceAgentId={selectedVoiceAgentId}
+              onVoiceChange={setSelectedVoiceAgentId}
+              maleAgentId={maleAgentId}
+              femaleAgentId={femaleAgentId}
             />
           </motion.div>
         ) : (
