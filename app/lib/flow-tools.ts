@@ -46,7 +46,7 @@ export const TOOLS: FlowToolDefinition[] = [
     function: {
       name: "ask_brain",
       description:
-        "ALWAYS USE THIS TOOL",
+        "ALWAYS USE THIS TOOL, IT CAN SEND MAIL, RETRIVE DATA, DO ACTIONS",
       parameters: {
         type: "object",
         properties: {
@@ -86,13 +86,13 @@ export async function executeToolCall(
           // timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
-
       if (!res.ok) {
         const errorBody = await res.text();
         throw new Error(`Brain API error (${res.status}): ${errorBody}`);
       }
-
+      
       const data = await res.json();
+      console.log("res", JSON.stringify(data, null, 2));
       return data.response ?? "No response from brain.";
     }
     default:
