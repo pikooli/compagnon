@@ -95,6 +95,10 @@ Only after these steps are done, enter plan mode.
 - Update SPECS.md, TECH.md, CLAUDE.md as you go
 
 ## Merging
-- When user says a branch is "ok" (or equivalent): commit, merge to main, delete the branch, push to remote
-- Always push main to remote after merging — remote must stay up to date
-- No PRs — direct merge workflow
+- **Multiple people work on this codebase — always use PRs, never direct merge to main.**
+- When the branch is ready: push to remote, open a PR via `gh pr create`, let it be reviewed and merged via GitHub.
+- **Before any action that impacts the remote** (push, PR creation, force push, branch deletion on remote, etc.), ALWAYS:
+  1. Explain what the action will do and its impact
+  2. Ask the user to confirm before proceeding
+  3. Only proceed after explicit approval
+- Never push directly to main. Never merge locally into main and push.
