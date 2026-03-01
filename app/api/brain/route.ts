@@ -5,12 +5,13 @@ import type { CalendarEventData, EmailData } from "@/app/types/ui-commands";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, threadId, assistantId, displayedEvents, displayedEmails } = body as {
+    const { message, threadId, assistantId, displayedEvents, displayedEmails, conversationHistory } = body as {
       message?: string;
       threadId?: string;
       assistantId?: string;
       displayedEvents?: CalendarEventData[];
       displayedEmails?: EmailData[];
+      conversationHistory?: { role: string; text: string }[];
     };
 
     if (!message || typeof message !== "string") {
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
       threadId: threadId ?? null,
       assistantId: assistantId ?? null,
       uiCommands: [],
+      conversationHistory,
     });
 
     return NextResponse.json({

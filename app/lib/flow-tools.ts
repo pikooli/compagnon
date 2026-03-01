@@ -75,6 +75,7 @@ interface ExecuteContext {
   displayedEmails?: EmailData[];
   focusedEventId?: string | null;
   focusedEmailId?: string | null;
+  conversationHistory?: { role: string; text: string }[];
 }
 
 /**
@@ -142,6 +143,7 @@ export async function executeToolCall(
           assistantId: context?.assistantId,
           displayedEvents: context?.displayedEvents,
           displayedEmails: context?.displayedEmails,
+          conversationHistory: context?.conversationHistory,
         }),
       });
       if (!res.ok) {

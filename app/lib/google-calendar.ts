@@ -201,7 +201,7 @@ export async function createCalendarEvent(event: {
     }
   });
 
-  const timeZone = event.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timeZone = event.timeZone ?? "Europe/Paris";
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
   const res = await calendar.events.insert({
@@ -402,7 +402,7 @@ export async function updateCalendarEvent(
     }
   });
 
-  const timeZone = updates.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timeZone = updates.timeZone ?? "Europe/Paris";
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
   // Build only the fields that are being changed

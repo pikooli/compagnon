@@ -78,21 +78,26 @@ export function createGetCalendarEventsTool(ctx: BrainContext) {
           return `No events found for ${timeRange}.`;
         }
 
+        // Use Europe/Paris as default since the target user is in Paris
+        const tz = "Europe/Paris";
         const formatted = events
           .map((e) => {
             const startDate = new Date(e.start);
-            const time = e.allDay
+            const endDate = new Date(e.end);
+            const timeFmt = { hour: "numeric" as const, minute: "2-digit" as const, timeZone: tz };
+            const startTime = e.allDay
               ? "All day"
-              : startDate.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-              });
+              : startDate.toLocaleTimeString("en-US", timeFmt);
+            const endTime = e.allDay
+              ? ""
+              : ` – ${endDate.toLocaleTimeString("en-US", timeFmt)}`;
             const date = startDate.toLocaleDateString("en-US", {
               weekday: "short",
               month: "short",
               day: "numeric",
+              timeZone: tz,
             });
-            let line = `- ${date} ${time}: ${e.summary}`;
+            let line = `- ${date} ${startTime}${endTime}: ${e.summary}`;
             if (e.location) line += ` (at ${e.location})`;
             return line;
           })
@@ -163,15 +168,17 @@ export function createCreateCalendarEventTool(ctx: BrainContext) {
         };
         ctx.uiCommands.push(uiCommand);
 
+        const eventTimeZone = timeZone ?? "Europe/Paris";
         const startDate = new Date(event.start);
         const dateStr = startDate.toLocaleDateString("en-US", {
           weekday: "long",
           month: "long",
           day: "numeric",
+          timeZone: eventTimeZone,
         });
         const timeStr = event.allDay
           ? "all day"
-          : startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          : startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: eventTimeZone });
 
         return `Done! I've added "${event.summary}" to your calendar on ${dateStr} at ${timeStr}.`;
       } catch (err: unknown) {
@@ -258,15 +265,17 @@ export function createUpdateCalendarEventTool(ctx: BrainContext) {
         };
         ctx.uiCommands.push(uiCommand);
 
+        const updateTimeZone = timeZone ?? "Europe/Paris";
         const startDate = new Date(updated.start);
         const dateStr = startDate.toLocaleDateString("en-US", {
           weekday: "long",
           month: "long",
           day: "numeric",
+          timeZone: updateTimeZone,
         });
         const timeStr = updated.allDay
           ? "all day"
-          : startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          : startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: updateTimeZone });
 
         return `Done! I've updated "${updated.summary}" — it's now on ${dateStr} at ${timeStr}.`;
       } catch (err: unknown) {

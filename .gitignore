@@ -40,6 +40,9 @@ yarn-error.log*
 # Google Calendar OAuth tokens (auto-generated, contains secrets)
 .google-calendar-tokens.json
 
+# User rules/preferences (auto-generated, personal to each user)
+.user-rules.md
+
 # vercel
 .vercel
 

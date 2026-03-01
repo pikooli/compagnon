@@ -31,6 +31,7 @@ export interface ToolCallingContext {
   displayedEmails?: EmailData[];
   focusedEventId?: string | null;
   focusedEmailId?: string | null;
+  conversationHistory?: { role: "user" | "agent"; text: string }[];
 }
 
 export function useFlowToolCalling(

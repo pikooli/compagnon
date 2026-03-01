@@ -155,8 +155,9 @@ export function VoiceAgent() {
       displayedEmails,
       focusedEventId,
       focusedEmailId,
+      conversationHistory: messages,
     }),
-    [sessionThreadId, selectedAssistantId, displayedEvents, displayedEmails, focusedEventId, focusedEmailId],
+    [sessionThreadId, selectedAssistantId, displayedEvents, displayedEmails, focusedEventId, focusedEmailId, messages],
   );
 
   const { activeToolCall, handleToolInvoke } =
