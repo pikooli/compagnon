@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Compagnon
 
-## Getting Started
+**Voice-first executive assistant** — [Click here to see our Presentation](https://compagnon-ai-assistant.lovable.app/)
 
-First, run the development server:
+Field sales professionals deal with constant interruptions — last-minute meeting requests, calendar changes, and follow-ups — often while moving between client visits. Managing those changes manually creates friction, increases cognitive load, and makes it harder to protect priorities and personal time.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Compagnon turns voice into structured execution.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Users can choose between a female or male voice based on their preference, making the interaction feel more natural and personal. Through voice, they can create, edit, or delete meetings directly in Google Calendar, draft and send emails, and handle follow-ups instantly — without navigating multiple tools.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Under the hood, Speechmatics powers accurate, low-latency voice input. OpenAI models running on Cerebras infrastructure handle fast reasoning to interpret intent and evaluate constraints. Backboard manages both short-term and long-term memory, storing persistent rules like "family time after 6 PM" or preferred scheduling windows and applying them automatically to future actions. We prototyped the interface using Lovable to design a clean, responsive UI that visually confirms every change in real time.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The result is a voice-first assistant that doesn't just suggest times — it understands intent, learns user boundaries, and executes scheduling workflows intelligently and autonomously.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## How to get started
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Clone and install**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   git clone <repo-url>
+   cd compagnon
+   pnpm install
+   ```
 
-## Deploy on Vercel
+2. **Configure environment**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   Copy `.env.example` to `.env` and fill in your API keys and config (see the file for required variables).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Run locally**
+
+   ```bash
+   pnpm dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+4. **Get more informations**
+
+   On this explaination slide : [https://compagnon-ai-assistant.lovable.app/](https://compagnon-ai-assistant.lovable.app/)
