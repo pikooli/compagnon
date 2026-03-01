@@ -1,8 +1,8 @@
 "use server";
 
+import { BackboardClient, type BackboardAssistant, type BackboardMemory } from "@/app/lib/backboard";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
-import { BackboardClient, type BackboardAssistant, type BackboardMemory } from "@/app/lib/backboard";
 
 const ASSISTANT_ID_FILE = join(process.cwd(), ".backboard-assistant-id");
 
@@ -38,10 +38,9 @@ async function getAssistantId(): Promise<string> {
 
   // Auto-create assistant on first run
   const client = getClient();
-  console.log("[Backboard] No assistant found — creating one...");
   const assistant = await client.createAssistant(
-    "Elderly Care Voice Agent",
-    "You are a caring voice assistant for elderly people. You remember personal details, family members, routines, and preferences shared across conversations.",
+    "Voice Agent",
+    "You are a caring voice assistant. You remember personal details, family members, routines, and preferences shared across conversations.",
   );
   cachedAssistantId = assistant.assistant_id;
 

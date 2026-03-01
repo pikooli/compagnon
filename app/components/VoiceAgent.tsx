@@ -1,41 +1,45 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { getJWT } from "@/app/actions/auth";
+import {
+  createNewAssistant,
+  fetchAllMemories,
+  getBackboardSessionInfo,
+  listAssistants,
+  setActiveAssistant,
+} from "@/app/actions/backboard";
+import { GoogleCalendarConnect } from "@/app/components/GoogleCalendarConnect";
+import { useAdminDebug } from "@/app/contexts/AdminDebugContext";
+import {
+  useConversationMirror,
+  type MirrorCallbacks,
+} from "@/app/hooks/useConversationMirror";
+import {
+  useFlowToolCalling,
+  type ToolCallingCallbacks,
+  type ToolCallingContext,
+} from "@/app/hooks/useFlowToolCalling";
+import type { BackboardAssistant } from "@/app/lib/backboard";
+import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
+import {
+  useAudioDevices,
+  usePCMAudioListener,
+  usePCMAudioRecorderContext,
+} from "@speechmatics/browser-audio-input-react";
 import {
   useFlow,
   useFlowEventListener,
   type AgentAudioEvent,
   type FlowIncomingMessageEvent,
 } from "@speechmatics/flow-client-react";
-import {
-  useAudioDevices,
-  usePCMAudioRecorderContext,
-  usePCMAudioListener,
-} from "@speechmatics/browser-audio-input-react";
 import { usePCMAudioPlayerContext } from "@speechmatics/web-pcm-player-react";
-import { getJWT } from "@/app/actions/auth";
-import {
-  getBackboardSessionInfo,
-  listAssistants,
-  setActiveAssistant,
-  fetchAllMemories,
-  createNewAssistant,
-} from "@/app/actions/backboard";
-import type { BackboardAssistant } from "@/app/lib/backboard";
-import {
-  useFlowToolCalling,
-  type ToolCallingCallbacks,
-  type ToolCallingContext,
-} from "@/app/hooks/useFlowToolCalling";
-import {
-  useConversationMirror,
-  type MirrorCallbacks,
-} from "@/app/hooks/useConversationMirror";
-import type { ToolInvokeMessage } from "@/app/lib/flow-tools";
-import { useAdminDebug } from "@/app/contexts/AdminDebugContext";
-import { GoogleCalendarConnect } from "@/app/components/GoogleCalendarConnect";
+import { Mic, MicOff } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const AGENT_ID = "1d9e7010-5c07-40d4-8088-42a5a0bc5645:latest";
+
+const MALE_AGENT_ID = process.env.NEXT_PUBLIC_MALE_AGENT_ID || '';
+const FEMALE_AGENT_ID = process.env.NEXT_PUBLIC_FEMALE_AGENT_ID || '';
+const ICON_SIZE = 38;
 
 function float32ToInt16(float32: Float32Array): Int16Array {
   const int16 = new Int16Array(float32.length);
@@ -53,6 +57,7 @@ export function VoiceAgent() {
   const [selectedAssistantId, setSelectedAssistantId] = useState<string>("");
   const [newAssistantName, setNewAssistantName] = useState<string>("");
   const [creatingAssistant, setCreatingAssistant] = useState(false);
+  const [selectedVoiceAgentId, setSelectedVoiceAgentId] = useState<string>(FEMALE_AGENT_ID);
   const [messages, setMessages] = useState<
     { role: "user" | "agent"; text: string }[]
   >([]);
@@ -202,6 +207,7 @@ export function VoiceAgent() {
           setError(JSON.stringify(msg));
           setIsActive(false);
           break;
+          // @ts-expect-error - FlowIncomingMessageEvent is not typed correctly
         case "ToolInvoke":
           handleToolInvoke(msg as unknown as ToolInvokeMessage);
           break;
@@ -222,7 +228,7 @@ export function VoiceAgent() {
         }
       });
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Request mic permissions on mount
@@ -259,6 +265,16 @@ export function VoiceAgent() {
     }
   };
 
+  const handleMute = useCallback(async () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      await startRecording({
+        deviceId: selectedDeviceId || undefined,
+      });
+    }
+  }, [isRecording, selectedDeviceId, startRecording, stopRecording]);
+
   const handleStart = async () => {
     try {
       setError("");
@@ -282,7 +298,7 @@ export function VoiceAgent() {
 
       await startConversation(jwt, {
         config: {
-          template_id: AGENT_ID,
+          template_id: selectedVoiceAgentId,
           template_variables: {},
         },
         audioFormat: {
@@ -340,6 +356,17 @@ export function VoiceAgent() {
             </option>
           ))}
         </select>
+        <select
+          id="voice-agent-select"
+          value={selectedVoiceAgentId}
+          onChange={(e) => setSelectedVoiceAgentId(e.target.value)}
+          disabled={isActive}
+          className="w-full rounded border border-foreground/20 bg-background p-2 text-base text-foreground"
+        >
+          <option value="">Select Voice Agent</option>
+          <option value={MALE_AGENT_ID}>Male</option  >
+          <option value={FEMALE_AGENT_ID}>Female</option>
+        </select>
         <div className="mt-2 flex gap-2">
           <input
             type="text"
@@ -385,34 +412,37 @@ export function VoiceAgent() {
           ))}
         </select>
       </div>
+      <div className="flex items-center justify-center flex-col gap-2 md:flex-row mb-2">
+        <button
+          onClick={isActive ? handleStop : handleStart}
+          disabled={socketState === "connecting"}
+          className={`mb-6 cursor-pointer rounded-lg px-8 py-3 text-xl text-white ${isActive ? "bg-red-600" : "bg-green-600"
+            }`}
+        >
+          {isActive ? "Stop" : "Start Conversation"}
+        </button>
+        <button
+          onClick={handleMute}
+          disabled={!isActive}
+          className="cursor-pointer rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500 disabled:cursor-default disabled:opacity-50"
+        >
+          {isRecording ? <Mic size={ICON_SIZE}/> : <MicOff size={ICON_SIZE}/>}
+        </button>
+      </div>
 
-      {/* Start / Stop */}
-      <button
-        onClick={isActive ? handleStop : handleStart}
-        disabled={socketState === "connecting"}
-        className={`mb-6 cursor-pointer rounded-lg px-8 py-3 text-xl text-white ${
-          isActive ? "bg-red-600" : "bg-green-600"
-        }`}
-      >
-        {isActive ? "Stop" : "Start Conversation"}
-      </button>
-
-      {/* Status */}
       <p className="mb-4 text-sm text-foreground/50">
         Socket: {socketState ?? "idle"} | Recording:{" "}
         {isRecording ? "yes" : "no"}
       </p>
 
-      {/* Tool call status */}
       {activeToolCall && (
         <div
-          className={`mb-4 rounded-lg p-4 text-lg ${
-            activeToolCall.state === "executing"
+          className={`mb-4 rounded-lg p-4 text-lg ${activeToolCall.state === "executing"
               ? "animate-pulse bg-yellow-500/20 text-yellow-700 dark:text-yellow-300"
               : activeToolCall.state === "completed"
                 ? "bg-green-500/20 text-green-700 dark:text-green-300"
                 : "bg-red-500/20 text-red-700 dark:text-red-300"
-          }`}
+            }`}
         >
           {activeToolCall.state === "executing" && (
             <span>Thinking...</span>
@@ -439,9 +469,8 @@ export function VoiceAgent() {
         return (
           <div
             key={i}
-            className={`mb-3 rounded-lg p-4 ${
-              msg.role === "user" ? "bg-foreground/10" : "bg-blue-500/10"
-            }`}
+            className={`mb-3 rounded-lg p-4 ${msg.role === "user" ? "bg-foreground/10" : "bg-blue-500/10"
+              }`}
           >
             <strong className="text-base">
               {msg.role === "user" ? "You:" : "Agent:"}

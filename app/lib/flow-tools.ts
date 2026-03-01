@@ -46,7 +46,7 @@ export const TOOLS: FlowToolDefinition[] = [
     function: {
       name: "ask_brain",
       description:
-        "Routes any question that needs deeper thinking, memory recall, calculations, or external lookups to the brain. Use this whenever the user asks something you can't answer from the current conversation alone — for example, recalling past conversations, personal details, family members, preferences, or routines.",
+        "ALWAYS USE THIS TOOL",
       parameters: {
         type: "object",
         properties: {
