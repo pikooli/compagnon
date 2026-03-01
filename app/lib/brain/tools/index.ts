@@ -3,7 +3,8 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
 import { tools as contactTools } from "./contact";
-import { getCalendarEvents, createCalendarEventTool, updateCalendarEventTool, deleteCalendarEventTool } from "./google/calendar";
+import { createCalendarEventTool, deleteCalendarEventTool, getCalendarEvents, updateCalendarEventTool } from "./google/calendar";
+import { tools as gmailTools } from './google/gmail';
 import { tools as productTools } from "./product";
 
 export interface BrainContext {
@@ -61,5 +62,5 @@ export function createBrainTools(ctx: BrainContext) {
     },
   );
 
-  return [recallMemories, getCalendarEvents, createCalendarEventTool, updateCalendarEventTool, deleteCalendarEventTool, ...contactTools, ...productTools];
+  return [recallMemories, getCalendarEvents, createCalendarEventTool, updateCalendarEventTool, deleteCalendarEventTool, ...contactTools, ...productTools, ...gmailTools];
 }
