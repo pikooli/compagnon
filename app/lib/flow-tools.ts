@@ -48,7 +48,7 @@ export const TOOLS: FlowToolDefinition[] = [
     function: {
       name: "ask_brain",
       description:
-        "ALWAYS call this tool for EVERYTHING the user says. This includes: retrieving data, sending mail, performing actions, AND navigation commands like 'go back', 'return to list', 'show all'. NEVER respond without calling this tool first.",
+        "ALWAYS call this tool for EVERYTHING the user says. This includes: retrieving data, sending mail, performing actions, AND navigation commands like 'go back', 'return to list', 'show all'. NEVER respond without calling this tool first. The USER LIVE IN PARIS, SO ALWAYSUSE THE TIMEZONE OF PARIS",
       parameters: {
         type: "object",
         properties: {

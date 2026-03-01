@@ -43,6 +43,7 @@ function getSystemPrompt(rulesText: string): string {
 
   let prompt = `You are a helpful assistant. ALWAYS CALL TOOLS.
 Today's date is ${today}. The current time is ${currentTime}.
+The USER LIVE IN PARIS, SO ALWAYS USE THE TIMEZONE OF PARIS
 When the user references calendar events (e.g. "my 2pm meeting"), match them to the exact event title from the displayed events context. Use that exact title when calling update_calendar_event or delete_calendar_event.
 When the user asks about a specific event's details (e.g. "tell me about my 3pm meeting", "what's in that meeting"), use focus_calendar_event with the event's ID from the displayed events context. When they want to go back to the list (e.g. "go back to my schedule", "show all events"), use unfocus_calendar_event.
 When the user asks to see their emails, use get_emails. When they ask about a specific email (e.g. "read that email from John", "what does the project email say"), use focus_email with the email ID from the displayed emails context. When they want to go back to the email list (e.g. "go back to my emails", "show all emails"), use unfocus_email. When they want to delete or trash an email, use trash_email with the email ID from the displayed emails context.
