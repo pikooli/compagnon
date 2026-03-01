@@ -1,9 +1,9 @@
+import { getCalendarAuthUrl } from "@/app/lib/google-calendar";
 import { NextResponse } from "next/server";
-import { getAuthUrl } from "@/app/lib/google-calendar";
 
 export async function GET() {
   try {
-    const url = getAuthUrl();
+    const url = getCalendarAuthUrl();
     return NextResponse.json({ url });
   } catch (err) {
     console.error("[API:google-calendar:auth-url] Error:", err);
