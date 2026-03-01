@@ -1,9 +1,10 @@
 "use client";
 
 import { useUICommands } from "@/app/contexts/UICommandContext";
-import type { DisplayCalendarData, EmailData } from "@/app/types/ui-commands";
+import type { DisplayCalendarData, DisplayDynamicData, EmailData } from "@/app/types/ui-commands";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDisplay } from "./CalendarDisplay";
+import { DynamicDisplay } from "./DynamicDisplay";
 import { EmailDisplay } from "./EmailDisplay";
 
 export function InteractivePanel() {
@@ -50,6 +51,21 @@ export function InteractivePanel() {
                   >
                     <EmailDisplay
                       data={cmd.data as { emails: EmailData[] }}
+                    />
+                  </motion.div>
+                );
+              case "display_dynamic":
+                return (
+                  <motion.div
+                    key={cmd.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-6"
+                  >
+                    <DynamicDisplay
+                      data={cmd.data as DisplayDynamicData}
                     />
                   </motion.div>
                 );

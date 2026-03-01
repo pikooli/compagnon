@@ -2,6 +2,7 @@
 
 import type { CalendarEventData } from "@/app/types/ui-commands";
 import { motion } from "framer-motion";
+import { MapEmbed } from "./MapEmbed";
 import {
   ArrowLeft,
   Calendar,
@@ -110,9 +111,12 @@ export function MeetingDetailView({ event, onBack }: MeetingDetailViewProps) {
 
       {/* Location */}
       {event.location && (
-        <div className="flex items-start gap-3 text-slate-200">
-          <MapPin className="mt-0.5 h-6 w-6 shrink-0 text-blue-400" />
-          <span className="text-xl">{event.location}</span>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 text-slate-200">
+            <MapPin className="mt-0.5 h-6 w-6 shrink-0 text-blue-400" />
+            <span className="text-xl">{event.location}</span>
+          </div>
+          <MapEmbed address={event.location} />
         </div>
       )}
 

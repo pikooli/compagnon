@@ -21,6 +21,7 @@
     "@speechmatics/flow-client-react": "^0.2.1",
     "@speechmatics/web-pcm-player": "^1.0.0",
     "@speechmatics/web-pcm-player-react": "^2.0.0",
+    "dompurify": "^3.3.1",
     "framer-motion": "^12.34.3",
     "googleapis": "^171.4.0",
     "lucide-react": "^0.575.0",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -94,6 +94,18 @@ export interface RemoveEmailCommand extends UICommand {
   data: { emailId: string };
 }
 
+// --- Dynamic UI types ---
+
+export interface DisplayDynamicData {
+  html: string;
+  title?: string;
+}
+
+export interface DisplayDynamicCommand extends UICommand {
+  type: "display_dynamic";
+  data: DisplayDynamicData;
+}
+
 /** Union of all known UI command types — extend as new display types are added */
 export type KnownUICommand =
   | DisplayCalendarCommand
@@ -105,4 +117,5 @@ export type KnownUICommand =
   | DisplayEmailsCommand
   | FocusEmailCommand
   | UnfocusEmailCommand
-  | RemoveEmailCommand;
+  | RemoveEmailCommand
+  | DisplayDynamicCommand;

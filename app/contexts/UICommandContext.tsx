@@ -217,17 +217,14 @@ export function UICommandProvider({ children }: { children: ReactNode }) {
       const hasMutations =
         updateCmds.length > 0 || addCmds.length > 0 || removeCmds.length > 0 || removeEmailCmds.length > 0;
 
-      // Display commands replace older ones of the same type and go to the front
-      const displayTypes = new Set(
-        regularCmds
-          .filter((c) => c.type === "display_calendar" || c.type === "display_emails")
-          .map((c) => c.type),
-      );
+      // Display commands replace ALL previous display commands (only one display at a time)
+      const allDisplayTypes = new Set(["display_calendar", "display_emails", "display_dynamic"]);
+      const hasNewDisplay = regularCmds.some((c) => allDisplayTypes.has(c.type));
 
       if (!hasMutations) {
         setCommands((prev) => {
-          const filtered = displayTypes.size > 0
-            ? prev.filter((c) => !displayTypes.has(c.type))
+          const filtered = hasNewDisplay
+            ? prev.filter((c) => !allDisplayTypes.has(c.type))
             : prev;
           return [...regularCmds, ...filtered];
         });
@@ -236,8 +233,8 @@ export function UICommandProvider({ children }: { children: ReactNode }) {
 
       // Process mutation commands by mutating existing display_calendar commands
       setCommands((prev) => {
-        const filtered = displayTypes.size > 0
-          ? prev.filter((c) => !displayTypes.has(c.type))
+        const filtered = hasNewDisplay
+          ? prev.filter((c) => !allDisplayTypes.has(c.type))
           : prev;
         let updated = [...regularCmds, ...filtered];
 
