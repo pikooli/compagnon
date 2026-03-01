@@ -19,20 +19,22 @@
 - `app/lib/brain/agent.ts` — LangGraph ReAct agent, singleton ChatCerebras LLM, `invokeBrain(message, ctx)` returns `BrainResult { response, uiCommands }`
 - `app/lib/brain/tools/index.ts` — brain tools factory `createBrainTools(ctx)`; tools close over session context (threadId, assistantId, uiCommands)
 - `app/lib/brain/index.ts` — re-exports `invokeBrain`, `BrainResult`, `BrainContext`
-- `app/api/brain/route.ts` — POST endpoint: `{ message, threadId?, assistantId?, displayedEvents?, displayedEmails? }` → `{ response, uiCommands }`. When `displayedEvents` or `displayedEmails` are present, prepends them as structured context to the message.
+- `app/api/brain/route.ts` — POST endpoint: `{ message, threadId?, assistantId?, displayedEvents?, displayedEmails?, conversationHistory? }` → `{ response, uiCommands }`. When `displayedEvents` or `displayedEmails` are present, prepends them as structured context to the message.
 - Model: Cerebras `gpt-oss-120b` (MoE, ~3,000 tokens/sec)
+- **Conversation history**: full `messages` array (user/agent turns) is sent from `VoiceAgent` → `flow-tools` → `POST /api/brain` → `invokeBrain`. Prior turns are prepended as LangGraph messages before the current enriched user message. The last history entry is excluded (it duplicates the current enriched message). This gives the brain full conversational context for detecting implicit preferences and reasoning about prior exchanges.
 - Agent re-created per request (graph compilation is lightweight); LLM instance cached
-- Brain tools: `recall_memories` (queries Backboard API for stored memories), `get_calendar_events` (reads Google Calendar + auto-pushes UICommand), `create_calendar_event` (creates Google Calendar event + auto-pushes `AddCalendarEventCommand`), `update_calendar_event` (updates Google Calendar + auto-pushes `UpdateCalendarEventCommand`), `delete_calendar_event` (deletes Google Calendar event + auto-pushes `RemoveCalendarEventCommand`), `focus_calendar_event` (pure UI — pushes `FocusCalendarEventCommand` to show event detail view), `unfocus_calendar_event` (pure UI — pushes `UnfocusCalendarEventCommand` to return to list view), `get_emails` (reads Gmail inbox + auto-pushes `DisplayEmailsCommand`), `focus_email` (fetches full email body + pushes `FocusEmailCommand` with body data), `unfocus_email` (pure UI — pushes `UnfocusEmailCommand` to return to email list), `trash_email` (moves email to trash + pushes `RemoveEmailCommand`), `send_email` (sends email via Gmail)
+- Brain tools: `recall_memories` (queries Backboard API for stored memories), `get_calendar_events` (reads Google Calendar + auto-pushes UICommand), `create_calendar_event` (creates Google Calendar event + auto-pushes `AddCalendarEventCommand`), `update_calendar_event` (updates Google Calendar + auto-pushes `UpdateCalendarEventCommand`), `delete_calendar_event` (deletes Google Calendar event + auto-pushes `RemoveCalendarEventCommand`), `focus_calendar_event` (pure UI — pushes `FocusCalendarEventCommand` to show event detail view), `unfocus_calendar_event` (pure UI — pushes `UnfocusCalendarEventCommand` to return to list view), `get_emails` (reads Gmail inbox + auto-pushes `DisplayEmailsCommand`), `focus_email` (fetches full email body + pushes `FocusEmailCommand` with body data), `unfocus_email` (pure UI — pushes `UnfocusEmailCommand` to return to email list), `trash_email` (moves email to trash + pushes `RemoveEmailCommand`), `send_email` (sends email via Gmail), `save_rule` (saves user preference to `.user-rules.md`), `remove_rule` (removes a preference), `list_rules` (returns all saved preferences)
 - All calendar and email tools are factories that accept `BrainContext` (for `ctx.uiCommands` access)
 - New tools should be added to `app/lib/brain/tools/index.ts` in the `createBrainTools` function
 - Data-fetching tools can auto-push `UICommand` entries to `ctx.uiCommands` for frontend display
+- **Proactive calendar checking**: system prompt instructs the agent to always call `get_calendar_events` before `create_calendar_event` to detect conflicts and suggest free slots. No extra tools needed — LangGraph ReAct chains the calls naturally.
 - Env vars: `CEREBRAS_API_KEY` (required)
 
 # Tool Calling
 - `app/hooks/useFlowToolCalling.ts` patches WebSocket to work around SDK v0.2.2 lacking tool support
 - When SDK is updated with native tool calling, refactor to remove the WS patching
 - `ask_brain` tool in `app/lib/flow-tools.ts` — catch-all that calls `POST /api/brain`
-- `executeToolCall()` passes session context (threadId, assistantId, displayedEvents, displayedEmails, focusedEventId, focusedEmailId) + optional `onUICommands` callback to forward UI commands from the brain API response
+- `executeToolCall()` passes session context (threadId, assistantId, displayedEvents, displayedEmails, focusedEventId, focusedEmailId, conversationHistory) + optional `onUICommands` callback to forward UI commands from the brain API response
 - **Navigation intercept**: `executeToolCall` intercepts "go back" phrases (regex: `/\b(go back|back to|return to|show all)\b/i`) in the `ask_brain` message *before* hitting the brain. If something is focused, pushes the unfocus UICommand client-side and returns instantly — no brain round-trip needed. Falls through to brain if nothing is focused.
 - `ToolCallingCallbacks.onUICommands` — called when brain returns UI commands; VoiceAgent wires this to `UICommandContext.pushCommands`
 
@@ -46,6 +48,17 @@
 - Backboard failures never break the voice conversation — all errors are caught and logged
 - Env vars: `BACKBOARD_API_KEY` (required)
 - Assistant ID auto-persisted to `.backboard-assistant-id` file (gitignored, created on first run)
+
+# User Rules
+- `app/lib/rules.ts` — file I/O utility: `readRules()`, `listRules()`, `addRule()`, `removeRule()`
+- `app/lib/brain/tools/rules.ts` — brain tools: `save_rule`, `remove_rule`, `list_rules`
+- Rules persisted to `.user-rules.md` (project root, gitignored, auto-created on first rule save)
+- Rules injected into brain system prompt on every `invokeBrain()` call via `getSystemPrompt(rulesText)`
+- Brain detects implicit preferences from conversation and saves them via `save_rule` tool
+- When an action would violate a rule, brain warns user via voice and asks for confirmation
+- No categorization — flat list of free-form rules in markdown bullet format
+- Rules are global (not per-assistant or per-thread), single-user
+- Rule file format: one rule per line, each starting with `- `
 
 # Google Calendar
 - `app/lib/google-calendar.ts` — OAuth2 client, token management, `listCalendarEvents()` function
