@@ -14,7 +14,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${colors[status] ?? "bg-foreground/10 text-slate-400"}`}
+      className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${colors[status] ?? "bg-foreground/10 text-foreground/50"}`}
     >
       {status}
     </span>
@@ -31,11 +31,11 @@ function MirrorLog() {
 
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
         Mirror Log ({mirrorLog.length})
       </h3>
       {mirrorLog.length === 0 ? (
-        <p className="mt-1 text-xs text-slate-500 italic">
+        <p className="mt-1 text-xs text-foreground/30 italic">
           No turns mirrored yet
         </p>
       ) : (
@@ -46,7 +46,7 @@ function MirrorLog() {
           {mirrorLog.map((entry) => (
             <div
               key={entry.id}
-              className="rounded border-l-2 bg-[#0f1c3f] p-2"
+              className="rounded border-l-2 bg-foreground/5 p-2"
               style={{
                 borderColor:
                   entry.status === "sent"
@@ -58,21 +58,21 @@ function MirrorLog() {
             >
               <div className="flex items-center gap-2">
                 <StatusBadge status={entry.status} />
-                <span className="text-[10px] text-slate-500">
+                <span className="text-[10px] text-foreground/30">
                   {new Date(entry.timestamp).toLocaleTimeString()}
                 </span>
               </div>
               <div className="mt-1 text-xs">
-                <span className="text-slate-400">User: </span>
-                <span className="text-slate-200">
+                <span className="text-foreground/50">User: </span>
+                <span className="text-foreground/70">
                   {entry.userText.length > 80
                     ? entry.userText.slice(0, 80) + "..."
                     : entry.userText}
                 </span>
               </div>
               <div className="text-xs">
-                <span className="text-slate-400">Agent: </span>
-                <span className="text-slate-200">
+                <span className="text-foreground/50">Agent: </span>
+                <span className="text-foreground/70">
                   {entry.agentText.length > 80
                     ? entry.agentText.slice(0, 80) + "..."
                     : entry.agentText}
@@ -99,11 +99,11 @@ function ToolCallLog() {
 
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
         Tool Calls ({toolCallHistory.length})
       </h3>
       {toolCallHistory.length === 0 ? (
-        <p className="mt-1 text-xs text-slate-500 italic">
+        <p className="mt-1 text-xs text-foreground/30 italic">
           No tool calls yet
         </p>
       ) : (
@@ -120,7 +120,7 @@ function ToolCallLog() {
             return (
               <div
                 key={entry.id}
-                className="rounded border-l-2 bg-[#0f1c3f] p-2"
+                className="rounded border-l-2 bg-foreground/5 p-2"
                 style={{
                   borderColor:
                     entry.status === "completed"
@@ -135,22 +135,22 @@ function ToolCallLog() {
                   <span className="font-mono text-xs text-blue-400">
                     {entry.toolName}
                   </span>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[10px] text-foreground/30">
                     {duration}
                   </span>
                 </div>
                 <div className="mt-1 text-xs">
-                  <span className="text-slate-400">Args: </span>
-                  <span className="font-mono text-slate-400">
+                  <span className="text-foreground/50">Args: </span>
+                  <span className="font-mono text-foreground/60">
                     {JSON.stringify(entry.args).slice(0, 100)}
                   </span>
                 </div>
                 {entry.result && (
                   <details className="mt-1">
-                    <summary className="cursor-pointer text-xs text-slate-400">
+                    <summary className="cursor-pointer text-xs text-foreground/50">
                       Result
                     </summary>
-                    <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap text-[10px] text-slate-400">
+                    <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap text-[10px] text-foreground/60">
                       {entry.result}
                     </pre>
                   </details>
