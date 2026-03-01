@@ -1,4 +1,4 @@
-import { isCalendarConnected, listDriveFiles, readGoogleDoc, createGoogleDoc } from "@/app/lib/google-calendar";
+import { isCalendarConnected, listDriveFiles, readGoogleDoc, createGoogleDoc, readSpreadsheet } from "@/app/lib/google-calendar";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
@@ -77,6 +77,40 @@ export const createDocTool = tool(
         .string()
         .optional()
         .describe("Optional initial text content for the document"),
+    }),
+  },
+);
+
+export const readSpreadsheetTool = tool(
+  async ({ name }): Promise<string> => {
+    try {
+      const connected = await isCalendarConnected();
+      if (!connected) {
+        return "Google is not connected. The user needs to connect their Google account using the button in the app.";
+      }
+
+      const { rows, title } = await readSpreadsheet(name);
+      if (rows.length === 0) return `The spreadsheet "${title}" appears to be empty.`;
+
+      const text = rows.map((row) => row.join("\t")).join("\n");
+      return `Here is the content of "${title}":\n\n${text.slice(0, 4000)}`;
+    } catch (err: unknown) {
+      console.error("[Brain:sheets:read] Failed:", err);
+      if (err instanceof Error && err.message.includes("not found")) {
+        return (err as Error).message;
+      }
+      if (err instanceof Error && err.message.includes("403")) {
+        return "I couldn't read the spreadsheet because your Google connection needs to be updated. Please disconnect and reconnect in the app.";
+      }
+      return "I wasn't able to read the spreadsheet right now.";
+    }
+  },
+  {
+    name: "read_spreadsheet",
+    description:
+      "Reads the content of a Google Sheets spreadsheet by its exact name. Use when the user asks to look at, read, or check a spreadsheet.",
+    schema: z.object({
+      name: z.string().describe("The exact name of the spreadsheet in Google Drive"),
     }),
   },
 );

@@ -328,6 +328,42 @@ export async function createGoogleDoc(
   return { id: docId, url: `https://docs.google.com/document/d/${docId}/edit` };
 }
 
+// --- Google Sheets ---
+
+export async function readSpreadsheet(name: string): Promise<{ rows: string[][]; title: string }> {
+  const tokens = await loadTokens();
+  if (!tokens?.access_token) throw new Error("Google not connected");
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials(tokens);
+  oauth2Client.on("tokens", async (newTokens) => {
+    try {
+      const existing = (await loadTokens()) ?? {};
+      await saveTokens({ ...existing, ...newTokens } as StoredTokens);
+    } catch (err) {
+      console.error("[Google] Failed to save refreshed tokens:", err);
+    }
+  });
+
+  const drive = google.drive({ version: "v3", auth: oauth2Client });
+  const driveRes = await drive.files.list({
+    q: `name='${name.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
+    fields: "files(id, name)",
+    pageSize: 1,
+  });
+
+  const file = driveRes.data.files?.[0];
+  if (!file?.id) throw new Error(`Spreadsheet "${name}" not found`);
+
+  const sheets = google.sheets({ version: "v4", auth: oauth2Client });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: file.id,
+    range: "A1:Z200",
+  });
+
+  return { rows: res.data.values ?? [], title: file.name ?? name };
+}
+
 export async function updateCalendarEvent(
   eventId: string,
   updates: {
