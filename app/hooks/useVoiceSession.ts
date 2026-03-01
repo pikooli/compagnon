@@ -42,6 +42,7 @@ import { usePCMAudioPlayerContext } from "@speechmatics/web-pcm-player-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const FEMALE_AGENT_ID = process.env.NEXT_PUBLIC_FEMALE_AGENT_ID || "";
+const MALE_AGENT_ID = process.env.NEXT_PUBLIC_MALE_AGENT_ID || "";
 
 function float32ToInt16(float32: Float32Array): Int16Array {
   const int16 = new Int16Array(float32.length);
@@ -59,7 +60,8 @@ export function useVoiceSession() {
   const [selectedAssistantId, setSelectedAssistantId] = useState<string>("");
   const [newAssistantName, setNewAssistantName] = useState<string>("");
   const [creatingAssistant, setCreatingAssistant] = useState(false);
-  const [selectedVoiceAgentId] = useState<string>(FEMALE_AGENT_ID);
+  const [selectedVoiceAgentId, setSelectedVoiceAgentId] =
+    useState<string>(FEMALE_AGENT_ID);
   const [messages, setMessages] = useState<
     { role: "user" | "agent"; text: string }[]
   >([]);
@@ -420,6 +422,12 @@ export function useVoiceSession() {
     // Derived
     latestAgentMessage,
     hasInteractiveContent,
+
+    // Voice
+    selectedVoiceAgentId,
+    setSelectedVoiceAgentId,
+    maleAgentId: MALE_AGENT_ID,
+    femaleAgentId: FEMALE_AGENT_ID,
 
     // Handlers
     handleStart,

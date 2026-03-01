@@ -2,17 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 type IntroPhase = "fadein" | "hold" | "ready";
 
 interface LandingScreenProps {
   onStart: () => Promise<void>;
-  isConnecting: boolean;
+  selectedVoiceAgentId: string;
+  onVoiceChange: (id: string) => void;
+  maleAgentId: string;
+  femaleAgentId: string;
 }
 
-export function LandingScreen({ onStart, isConnecting }: LandingScreenProps) {
+export function LandingScreen({
+  onStart,
+  selectedVoiceAgentId,
+  onVoiceChange,
+  maleAgentId,
+  femaleAgentId,
+}: LandingScreenProps) {
   const [introPhase, setIntroPhase] = useState<IntroPhase>("fadein");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [pulseKey, setPulseKey] = useState(0);
 
   useEffect(() => {
     const holdTimer = setTimeout(() => setIntroPhase("hold"), 1000);
@@ -34,6 +45,15 @@ export function LandingScreen({ onStart, isConnecting }: LandingScreenProps) {
     };
   }, []);
 
+  const voiceOptions = [
+    { id: femaleAgentId, label: "Female voice" },
+    { id: maleAgentId, label: "Male voice" },
+  ];
+
+  const selectedLabel =
+    voiceOptions.find((v) => v.id === selectedVoiceAgentId)?.label ??
+    "Female voice";
+
   return (
     <motion.div
       className="flex h-screen w-full flex-col items-center justify-center bg-[#070d1f]"
@@ -42,7 +62,11 @@ export function LandingScreen({ onStart, isConnecting }: LandingScreenProps) {
     >
       <motion.h1
         className="text-5xl tracking-[0.25em] uppercase"
-        style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 500, color: "#FFFFF0" }}
+        style={{
+          fontFamily: "Montserrat, sans-serif",
+          fontWeight: 500,
+          color: "#FFFFF0",
+        }}
         initial={{ opacity: 0 }}
         animate={{
           opacity: 1,
@@ -63,10 +87,24 @@ export function LandingScreen({ onStart, isConnecting }: LandingScreenProps) {
         transition={{ duration: 0.6 }}
         style={{ pointerEvents: introPhase === "ready" ? "auto" : "none" }}
       >
+        <div className="relative flex items-center justify-center">
+          {/* Pulse ring on click */}
+          {pulseKey > 0 && (
+            <motion.div
+              key={pulseKey}
+              className="pointer-events-none absolute h-40 w-40 rounded-full border-2 border-blue-400/60"
+              initial={{ scale: 1, opacity: 0.7 }}
+              animate={{ scale: 3.5, opacity: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            />
+          )}
+
         <motion.button
-          onClick={onStart}
-          disabled={isConnecting}
-          className="relative flex h-40 w-40 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-2xl font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+          onClick={() => {
+            setPulseKey((k) => k + 1);
+            onStart();
+          }}
+          className="relative flex h-40 w-40 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-2xl font-semibold text-white shadow-lg"
           animate={{
             scale: [1, 1.03, 1],
             boxShadow: [
@@ -84,16 +122,43 @@ export function LandingScreen({ onStart, isConnecting }: LandingScreenProps) {
           whileHover={{ scale: 1.07 }}
           whileTap={{ scale: 0.97 }}
         >
-          {isConnecting ? (
-            <Loader2 className="h-10 w-10 animate-spin" />
-          ) : (
-            "Start"
-          )}
+          Start
         </motion.button>
+        </div>
 
-        {isConnecting && (
-          <p className="mt-6 text-base text-blue-300/60">Connecting...</p>
-        )}
+        {/* Voice selector */}
+        <div className="relative mt-20">
+          <button
+            onClick={() => setDropdownOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/60 px-5 py-2.5 text-base text-slate-300 transition-colors hover:border-slate-500 hover:text-white"
+          >
+            {selectedLabel}
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute left-1/2 mt-2 w-48 -translate-x-1/2 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 shadow-xl">
+              {voiceOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => {
+                    onVoiceChange(option.id);
+                    setDropdownOpen(false);
+                  }}
+                  className={`flex w-full items-center px-4 py-3 text-left text-base transition-colors hover:bg-slate-700 ${
+                    option.id === selectedVoiceAgentId
+                      ? "text-blue-400"
+                      : "text-slate-300"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </motion.div>
     </motion.div>
   );
