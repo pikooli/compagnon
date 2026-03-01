@@ -11,7 +11,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/gmail.send"
 ];
 
@@ -23,6 +23,11 @@ export interface CalendarEvent {
   start: string; // ISO 8601
   end: string; // ISO 8601
   allDay: boolean;
+  attendees?: {
+    email: string;
+    displayName?: string;
+    responseStatus?: string;
+  }[];
 }
 
 export function getRedirectUri(): string {
@@ -163,6 +168,11 @@ export async function listCalendarEvents(options?: {
     start: e.start?.dateTime ?? e.start?.date ?? "",
     end: e.end?.dateTime ?? e.end?.date ?? "",
     allDay: !e.start?.dateTime,
+    attendees: e.attendees?.map((a) => ({
+      email: a.email ?? "",
+      displayName: a.displayName ?? undefined,
+      responseStatus: a.responseStatus ?? undefined,
+    })),
   }));
 }
 

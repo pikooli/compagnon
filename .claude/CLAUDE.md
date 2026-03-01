@@ -16,21 +16,25 @@
 - Flow delegates to the brain via the `ask_brain` tool whenever deeper thinking, recall, or external lookups are needed.
 
 # Brain (LangGraph + Cerebras)
-- `app/lib/brain/agent.ts` — LangGraph ReAct agent, singleton ChatCerebras LLM, `invokeBrain(message, context)` function
-- `app/lib/brain/tools.ts` — brain tools factory `createBrainTools(ctx)`; tools close over session context (threadId, assistantId)
-- `app/lib/brain/index.ts` — re-exports
-- `app/api/brain/route.ts` — POST endpoint: `{ message, threadId?, assistantId? }` → `{ response }`
+- `app/lib/brain/agent.ts` — LangGraph ReAct agent, singleton ChatCerebras LLM, `invokeBrain(message, ctx)` returns `BrainResult { response, uiCommands }`
+- `app/lib/brain/tools/index.ts` — brain tools factory `createBrainTools(ctx)`; tools close over session context (threadId, assistantId, uiCommands)
+- `app/lib/brain/index.ts` — re-exports `invokeBrain`, `BrainResult`, `BrainContext`
+- `app/api/brain/route.ts` — POST endpoint: `{ message, threadId?, assistantId?, displayedEvents?, displayedEmails? }` → `{ response, uiCommands }`. When `displayedEvents` or `displayedEmails` are present, prepends them as structured context to the message.
 - Model: Cerebras `gpt-oss-120b` (MoE, ~3,000 tokens/sec)
 - Agent re-created per request (graph compilation is lightweight); LLM instance cached
-- Brain tools: `recall_memories` (queries Backboard API for stored memories), `get_calendar_events` (reads Google Calendar)
-- New tools should be added to `app/lib/brain/tools.ts` in the `createBrainTools` function
+- Brain tools: `recall_memories` (queries Backboard API for stored memories), `get_calendar_events` (reads Google Calendar + auto-pushes UICommand), `create_calendar_event` (creates Google Calendar event + auto-pushes `AddCalendarEventCommand`), `update_calendar_event` (updates Google Calendar + auto-pushes `UpdateCalendarEventCommand`), `delete_calendar_event` (deletes Google Calendar event + auto-pushes `RemoveCalendarEventCommand`), `focus_calendar_event` (pure UI — pushes `FocusCalendarEventCommand` to show event detail view), `unfocus_calendar_event` (pure UI — pushes `UnfocusCalendarEventCommand` to return to list view), `get_emails` (reads Gmail inbox + auto-pushes `DisplayEmailsCommand`), `focus_email` (fetches full email body + pushes `FocusEmailCommand` with body data), `unfocus_email` (pure UI — pushes `UnfocusEmailCommand` to return to email list), `trash_email` (moves email to trash + pushes `RemoveEmailCommand`), `send_email` (sends email via Gmail)
+- All calendar and email tools are factories that accept `BrainContext` (for `ctx.uiCommands` access)
+- New tools should be added to `app/lib/brain/tools/index.ts` in the `createBrainTools` function
+- Data-fetching tools can auto-push `UICommand` entries to `ctx.uiCommands` for frontend display
 - Env vars: `CEREBRAS_API_KEY` (required)
 
 # Tool Calling
 - `app/hooks/useFlowToolCalling.ts` patches WebSocket to work around SDK v0.2.2 lacking tool support
 - When SDK is updated with native tool calling, refactor to remove the WS patching
 - `ask_brain` tool in `app/lib/flow-tools.ts` — catch-all that calls `POST /api/brain`
-- `executeToolCall()` passes session context (threadId, assistantId) to the brain API
+- `executeToolCall()` passes session context (threadId, assistantId, displayedEvents, displayedEmails, focusedEventId, focusedEmailId) + optional `onUICommands` callback to forward UI commands from the brain API response
+- **Navigation intercept**: `executeToolCall` intercepts "go back" phrases (regex: `/\b(go back|back to|return to|show all)\b/i`) in the `ask_brain` message *before* hitting the brain. If something is focused, pushes the unfocus UICommand client-side and returns instantly — no brain round-trip needed. Falls through to brain if nothing is focused.
+- `ToolCallingCallbacks.onUICommands` — called when brain returns UI commands; VoiceAgent wires this to `UICommandContext.pushCommands`
 
 # Memory (Backboard.io)
 - `app/lib/backboard.ts` — REST wrapper for Backboard API (no external SDK, pure fetch)
@@ -52,17 +56,36 @@
 - `app/components/GoogleCalendarConnect.tsx` — connect/disconnect button (used in VoiceAgent)
 - OAuth tokens persisted to `.google-calendar-tokens.json` (gitignored, auto-created on OAuth)
 - Token auto-refresh handled by `googleapis` OAuth2Client `tokens` event
-- Read-only access (scope: `calendar.readonly`), single Google account at a time
+- Calendar scope: `calendar.events`; Gmail scopes: `gmail.modify` + `gmail.send`; single Google account at a time
 - Calendar failures never break the voice conversation — all errors caught and logged
 - Env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (required for calendar feature)
 - Optional env vars for bootstrapping without OAuth flow: `GOOGLE_ACCESS_TOKEN`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_EXPIRY_DATE`
 - Optional: `GOOGLE_REDIRECT_URI` (defaults to `http://localhost:3000/api/google-calendar/callback`)
 
+# Interactive UI Commands
+- **Pattern**: brain tools auto-push `UICommand` entries to `ctx.uiCommands` during execution; no separate "display" tool needed
+- `app/types/ui-commands.ts` — shared types: `UICommand`, `DisplayCalendarCommand`, `UpdateCalendarEventCommand`, `AddCalendarEventCommand`, `RemoveCalendarEventCommand`, `FocusCalendarEventCommand`, `UnfocusCalendarEventCommand`, `CalendarEventData`, `EmailData`, `DisplayEmailsCommand`, `FocusEmailCommand`, `UnfocusEmailCommand`, `RemoveEmailCommand`, `KnownUICommand` union
+- `app/contexts/UICommandContext.tsx` — React context: `pushCommands`, `dismissCommand`, `clearCommands`, `recentlyUpdatedEventIds`, `recentlyAddedEventIds`, `recentlyRemovedEventIds`, `focusedEventId`, `setFocusedEventId`, `focusedEmailId`, `setFocusedEmailId`, `recentlyRemovedEmailIds`; wraps entire app in `page.tsx`
+- **Calendar mutation pattern**: `pushCommands` detects mutation commands (`update_calendar_event`, `add_calendar_event`, `remove_calendar_event`) and mutates the existing `display_calendar` command in-place. None of these mutation commands are appended to the commands array. `recentlyUpdatedEventIds` (blue glow, 2s), `recentlyAddedEventIds` (green glow, 2s), and `recentlyRemovedEventIds` (triggers exit animation, event spliced after 400ms) track visual state.
+- **Email mutation pattern**: `pushCommands` intercepts `remove_email` → marks for exit animation via `recentlyRemovedEmailIds`, splices from `display_emails` after 400ms. `focus_email` with body data updates the email's `body` field in `display_emails` in-place.
+- **Focus/unfocus pattern**: `pushCommands` intercepts `focus_calendar_event` → sets `focusedEventId`, `unfocus_calendar_event` → clears it. `focus_email` → sets `focusedEmailId`, `unfocus_email` → clears it. Neither is appended to commands array. IDs cleared on removal or `clearCommands()`.
+- **Displayed events/emails context**: VoiceAgent extracts `displayedEvents` and `displayedEmails` from the last `display_calendar`/`display_emails` commands and passes them through `sessionContext` → `flow-tools.ts` → `POST /api/brain`. The route prepends them to the user message so the brain LLM can match "my 2pm meeting" or "that email from John" to exact IDs.
+- `app/components/interactive/InteractivePanel.tsx` — reads `UICommandContext`, switch-renders by command `type` (`display_calendar`, `display_emails`), `AnimatePresence` for animations
+- `app/components/interactive/CalendarDisplay.tsx` — renders calendar event cards with framer-motion; `AnimatePresence` wraps card list for entry/exit animations; blue glow for updated cards, green glow for added cards, slide-left + collapse exit for removed cards; when `focusedEventId` is set, renders `MeetingDetailView` instead of card list; elderly-friendly large text
+- `app/components/interactive/MeetingDetailView.tsx` — full event detail view: title, full date, time range, location, full description (no truncation), all attendees with response status icons (accepted=green, declined=red, tentative=yellow, no response=gray); back button returns to list
+- `app/components/interactive/EmailDisplay.tsx` — renders email cards (sender, subject, snippet, date, unread dot) with framer-motion; slide-left + collapse exit for removed emails; when `focusedEmailId` is set, renders `EmailDetailView` (subject, from, date, full body) with back button; elderly-friendly large text
+- Commands accumulate per session; `clearCommands()` called on new session start
+- To add a new display type: (1) add type to `ui-commands.ts`, (2) auto-push in the brain tool, (3) add case in `InteractivePanel`
+
+# Layout
+- 50/50 split layout: voice agent + debug panel (left), interactive display panel (right)
+- `app/components/SplitLayout.tsx` — fixed 50/50 flexbox split with collapsible right panel
+- Left panel: VoiceAgent on top, AdminPanel in collapsible `<details>` ("Debug Console") at bottom
+- Right panel: InteractivePanel (calendar cards, email cards, future: contacts, weather)
+
 # Admin Debug Panel
-- 50/50 split layout: voice agent (left), admin panel (right). Always visible.
 - `app/contexts/AdminDebugContext.tsx` — React context shared between VoiceAgent (data producer) and AdminPanel (data consumer)
 - `app/types/admin-debug.ts` — shared types: MirrorLogEntry, ToolCallEntry, RecallEntry, SessionInfo
-- `app/components/SplitLayout.tsx` — fixed 50/50 flexbox split
 - `app/components/admin/AdminPanel.tsx` — root admin container
 - `app/components/admin/SessionInfo.tsx` — session IDs, timer, stored memories, recall results
 - `app/components/admin/LiveFeed.tsx` — mirror log + tool call log with status badges

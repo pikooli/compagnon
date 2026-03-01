@@ -1,16 +1,18 @@
 import { BackboardClient } from "@/app/lib/backboard";
+import type { UICommand } from "@/app/types/ui-commands";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
 import { tools as contactTools } from "./contact";
-import { createCalendarEventTool, deleteCalendarEventTool, getCalendarEvents, updateCalendarEventTool } from "./google/calendar";
+import { createCreateCalendarEventTool, createDeleteCalendarEventTool, createFocusCalendarEventTool, createGetCalendarEventsTool, createUnfocusCalendarEventTool, createUpdateCalendarEventTool } from "./google/calendar";
 import { createDocTool, readDocTool, readSpreadsheetTool } from "./google/docs";
-import { tools as gmailTools } from './google/gmail';
+import { createGetEmailsTool, createFocusEmailTool, createUnfocusEmailTool, createTrashEmailTool, createSendEmailTool } from './google/gmail';
 import { tools as productTools } from "./product";
 
 export interface BrainContext {
   threadId?: string | null;
   assistantId?: string | null;
+  uiCommands: UICommand[];
 }
 
 /**
@@ -63,5 +65,5 @@ export function createBrainTools(ctx: BrainContext) {
     },
   );
 
-  return [recallMemories, getCalendarEvents, createCalendarEventTool, updateCalendarEventTool, deleteCalendarEventTool, readDocTool, createDocTool, readSpreadsheetTool, ...contactTools, ...productTools, ...gmailTools];
+  return [recallMemories, createGetCalendarEventsTool(ctx), createCreateCalendarEventTool(ctx), createUpdateCalendarEventTool(ctx), createDeleteCalendarEventTool(ctx), createFocusCalendarEventTool(ctx), createUnfocusCalendarEventTool(ctx), createGetEmailsTool(ctx), createFocusEmailTool(ctx), createUnfocusEmailTool(ctx), createTrashEmailTool(ctx), createSendEmailTool(ctx), readDocTool, createDocTool, readSpreadsheetTool, ...contactTools, ...productTools];
 }
